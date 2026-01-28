@@ -401,6 +401,7 @@
                 <div class="row">
                     <button class="btn primary" id="startResumeBtn" style="flex:1 1 220px;">Start / Resume</button>
                     <button class="btn" id="resetMatchBtn" style="flex:1 1 180px;">Reset Match</button>
+                    <button class="btn" id="downloadBtn" style="flex:1 1 220px;">Download</button>
                 </div>
 
                 <div class="spacer"></div>
@@ -496,6 +497,7 @@
 
                 profileLine: document.getElementById("profileLine"),
                 targetLabel: document.getElementById("targetLabel"),
+                downloadBtn: document.getElementById("downloadBtn"),
             };
 
             function resize() {
@@ -911,6 +913,28 @@
                 if (!sheetDrag.active) return;
                 endSheetDrag(e);
             }, { passive: true });
+
+            // ===== Download button (auto-hide when installed) =====
+            function isInstalled() {
+                return window.matchMedia("(display-mode: standalone)").matches ||
+                    window.navigator.standalone === true;
+            }
+
+            function refreshDownloadVisibility() {
+                if (!ui.downloadBtn) return;
+                ui.downloadBtn.classList.toggle("hide", isInstalled());
+            }
+
+            // Initial check
+            refreshDownloadVisibility();
+
+            // If installed while running
+            window.addEventListener("appinstalled", refreshDownloadVisibility);
+
+            // Open download page
+            ui.downloadBtn?.addEventListener("click", () => {
+                location.href = "./download.html";
+            });
 
             // Menu actions
             ui.startResumeBtn.addEventListener("click", () => {
