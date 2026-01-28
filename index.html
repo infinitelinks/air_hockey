@@ -1,0 +1,1067 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0f14" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <title>Air Hockey Pro (PWA)</title>
+    <style>
+        :root {
+            --bg: #0b0f14;
+            --panel: rgba(18, 26, 36, .78);
+            --line: rgba(255, 255, 255, .12);
+            --text: #e9f0ff;
+            --muted: #a9b6cc;
+            --gold: #ffd66e;
+            --ice: #e9f0ff;
+            --shadow: 0 18px 60px rgba(0, 0, 0, .45);
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            overflow: hidden
+        }
+
+        canvas {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            touch-action: none;
+            background: var(--bg)
+        }
+
+        /* Top HUD (auto-hides in gameplay if desired) */
+        .hud {
+            position: fixed;
+            top: env(safe-area-inset-top, 0px);
+            left: 0;
+            right: 0;
+            padding: 10px 10px 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            z-index: 5;
+        }
+
+        .pill {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 8px 10px;
+            font-weight: 850;
+            letter-spacing: .2px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, .20);
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        .pill span {
+            color: var(--muted);
+            font-weight: 750;
+            margin: 0 6px
+        }
+
+        .right {
+            display: flex;
+            gap: 8px;
+            align-items: center
+        }
+
+        .btn {
+            background: var(--panel);
+            border: 1px solid rgba(255, 255, 255, .14);
+            color: var(--text);
+            padding: 8px 10px;
+            border-radius: 12px;
+            font-weight: 900;
+            cursor: pointer;
+            user-select: none;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn:active {
+            transform: translateY(1px)
+        }
+
+        .btn.primary {
+            border-color: rgba(255, 214, 110, .35);
+            background: rgba(255, 214, 110, .16);
+        }
+
+        .btn.ghost {
+            background: rgba(18, 26, 36, .55);
+        }
+
+        /* Overlays */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            background: radial-gradient(1000px 700px at 50% 35%, rgba(255, 255, 255, .08), rgba(0, 0, 0, .62));
+            backdrop-filter: blur(6px);
+        }
+
+        .card {
+            width: min(560px, 94vw);
+            border-radius: 18px;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            padding: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .title {
+            margin: 0 0 8px;
+            font-size: 18px;
+            font-weight: 950;
+            letter-spacing: .2px
+        }
+
+        .sub {
+            margin: 0 0 12px;
+            color: var(--muted);
+            line-height: 1.45;
+            font-size: 13px
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center
+        }
+
+        select,
+        label.chk {
+            background: rgba(255, 255, 255, .08);
+            border: 1px solid rgba(255, 255, 255, .14);
+            color: var(--text);
+            padding: 10px 10px;
+            border-radius: 12px;
+            font-weight: 900;
+            outline: none;
+            flex: 1 1 200px;
+        }
+
+        label.chk {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer
+        }
+
+        label.chk input {
+            accent-color: var(--gold);
+        }
+
+        .grid2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px
+        }
+
+        .stat {
+            border: 1px solid rgba(255, 255, 255, .10);
+            background: rgba(0, 0, 0, .18);
+            border-radius: 14px;
+            padding: 10px 12px;
+            font-weight: 900;
+        }
+
+        .stat small {
+            display: block;
+            color: var(--muted);
+            font-weight: 750;
+            margin-bottom: 6px
+        }
+
+        .hide {
+            display: none !important
+        }
+    </style>
+</head>
+
+<body>
+
+    <canvas id="c"></canvas>
+
+    <div class="hud" id="hud">
+        <div class="pill" id="scorePill">
+            YOU <span id="sYou">0</span> : <span id="sAI">0</span> AI
+            <span id="modeLabel">NORMAL</span>
+        </div>
+        <div class="right">
+            <button class="btn ghost" id="pauseBtn">Pause</button>
+            <button class="btn" id="resetBtn">Reset</button>
+        </div>
+    </div>
+
+    <!-- Start menu -->
+    <div class="overlay" id="menu">
+        <div class="card">
+            <h1 class="title">Air Hockey Pro</h1>
+            <p class="sub">
+                Drag anywhere on the <b>bottom half</b> to move your paddle. Tap to serve.
+                Install as a PWA for best Android fullscreen feel.
+            </p>
+
+            <div class="row">
+                <select id="diffSel" title="Difficulty">
+                    <option value="easy">Easy</option>
+                    <option value="normal" selected>Normal</option>
+                    <option value="smart">Smart</option>
+                    <option value="hard">Hard</option>
+                    <option value="pro">Pro</option>
+                    <option value="legendary">Legendary (Learns you)</option>
+                </select>
+
+                <label class="chk">
+                    <input type="checkbox" id="soundToggle" checked />
+                    Sound
+                </label>
+            </div>
+
+            <div class="grid2">
+                <div class="stat">
+                    <small>Profile (Legendary)</small>
+                    <div id="profileLine">No data yet</div>
+                </div>
+                <div class="stat">
+                    <small>Match Target</small>
+                    <div>First to <span id="targetLabel">7</span></div>
+                </div>
+            </div>
+
+            <div class="row" style="margin-top:12px;">
+                <button class="btn primary" id="startBtn" style="flex:1 1 220px;">Start Match</button>
+                <button class="btn" id="installBtn" style="flex:1 1 160px;">Install</button>
+                <button class="btn ghost" id="clearLearnBtn" style="flex:1 1 160px;">Reset AI Learning</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pause overlay -->
+    <div class="overlay hide" id="pauseOverlay">
+        <div class="card">
+            <h2 class="title" style="margin-bottom:6px;">Paused</h2>
+            <p class="sub" style="margin-bottom:12px;">Resume when you’re ready.</p>
+            <div class="row">
+                <button class="btn primary" id="resumeBtn" style="flex:1 1 200px;">Resume</button>
+                <button class="btn" id="backToMenuBtn" style="flex:1 1 200px;">Back to Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (() => {
+            // -------------------- PWA install prompt --------------------
+            let deferredPrompt = null;
+            window.addEventListener("beforeinstallprompt", (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+            });
+
+            // -------------------- DOM --------------------
+            const canvas = document.getElementById("c");
+            const ctx = canvas.getContext("2d", { alpha: false });
+
+            const ui = {
+                hud: document.getElementById("hud"),
+                sYou: document.getElementById("sYou"),
+                sAI: document.getElementById("sAI"),
+                modeLabel: document.getElementById("modeLabel"),
+                resetBtn: document.getElementById("resetBtn"),
+                pauseBtn: document.getElementById("pauseBtn"),
+
+                menu: document.getElementById("menu"),
+                startBtn: document.getElementById("startBtn"),
+                diffSel: document.getElementById("diffSel"),
+                soundToggle: document.getElementById("soundToggle"),
+                targetLabel: document.getElementById("targetLabel"),
+                profileLine: document.getElementById("profileLine"),
+                installBtn: document.getElementById("installBtn"),
+                clearLearnBtn: document.getElementById("clearLearnBtn"),
+
+                pauseOverlay: document.getElementById("pauseOverlay"),
+                resumeBtn: document.getElementById("resumeBtn"),
+                backToMenuBtn: document.getElementById("backToMenuBtn"),
+            };
+
+            // -------------------- Register Service Worker --------------------
+            if ("serviceWorker" in navigator) {
+                window.addEventListener("load", async () => {
+                    try { await navigator.serviceWorker.register("./sw.js"); } catch { }
+                });
+            }
+
+            // -------------------- Audio (generated, no files) --------------------
+            let audioCtx = null;
+            function ensureAudio() {
+                if (!ui.soundToggle.checked) return;
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === "suspended") audioCtx.resume().catch(() => { });
+            }
+            function beep(type, freq, dur, gain) {
+                if (!ui.soundToggle.checked) return;
+                ensureAudio();
+                if (!audioCtx) return;
+                const t0 = audioCtx.currentTime;
+                const o = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                o.type = type;
+                o.frequency.setValueAtTime(freq, t0);
+                g.gain.setValueAtTime(0.0001, t0);
+                g.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain), t0 + 0.01);
+                g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+                o.connect(g).connect(audioCtx.destination);
+                o.start(t0);
+                o.stop(t0 + dur + 0.02);
+            }
+            const sfx = {
+                hit: (k) => beep("triangle", 140 + 140 * k, 0.07, 0.07 + 0.18 * k),
+                wall: () => beep("sine", 720, 0.06, 0.06),
+                goal: () => {
+                    beep("square", 520, 0.10, 0.10);
+                    setTimeout(() => beep("square", 780, 0.10, 0.09), 90);
+                    setTimeout(() => beep("square", 1040, 0.12, 0.08), 180);
+                },
+                win: () => {
+                    beep("sawtooth", 440, 0.14, 0.10);
+                    setTimeout(() => beep("sawtooth", 660, 0.14, 0.09), 140);
+                    setTimeout(() => beep("sawtooth", 880, 0.18, 0.08), 280);
+                }
+            };
+            window.addEventListener("pointerdown", ensureAudio, { passive: true });
+            window.addEventListener("keydown", ensureAudio, { passive: true });
+
+            // -------------------- Resize --------------------
+            function resize() {
+                const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+                canvas.width = Math.floor(innerWidth * dpr);
+                canvas.height = Math.floor(innerHeight * dpr);
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
+            addEventListener("resize", resize, { passive: true });
+            resize();
+            function dims() { return { w: innerWidth, h: innerHeight }; }
+            const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+            // -------------------- Game constants --------------------
+            const GAME = { targetScore: 7, fixedDt: 1 / 120, maxFrame: 1 / 30 };
+
+            const table = {
+                wall: 10,
+                pad: 22,
+                goalWidthFrac: 0.34,
+            };
+
+            // Entities
+            const puck = { x: 0, y: 0, r: 10, vx: 0, vy: 0, max: 1550 };
+            const you = { x: 0, y: 0, r: 22, vx: 0, vy: 0 };
+            const ai = { x: 0, y: 0, r: 22, vx: 0, vy: 0 };
+
+            // -------------------- Learning profile (stored) --------------------
+            // We store simple behavioral signals to help AI counter your habits:
+            // - where you hit from (x), and where the puck tends to go after your hit (vx sign)
+            // - your “favorite” side (left/right) and typical shot angle
+            const PROFILE_KEY = "ah_profile_v1";
+            function loadProfile() {
+                try {
+                    const raw = localStorage.getItem(PROFILE_KEY);
+                    if (!raw) return null;
+                    return JSON.parse(raw);
+                } catch { return null; }
+            }
+            function saveProfile(p) {
+                try { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch { }
+            }
+            function resetProfile() {
+                try { localStorage.removeItem(PROFILE_KEY); } catch { }
+                profile = makeFreshProfile();
+                updateProfileUI();
+            }
+            function makeFreshProfile() {
+                return {
+                    samples: 0,
+                    emaHitX: 0.5,           // normalized 0..1
+                    emaShotDir: 0.0,        // -1..+1, negative = tends left, positive = tends right
+                    emaShotAngle: 0.0,      // -1..+1, negative = down-left, positive = down-right
+                    emaAggression: 0.0,     // how often you push toward mid
+                    lastUpdate: Date.now()
+                };
+            }
+
+            let profile = loadProfile() || makeFreshProfile();
+
+            function updateProfileUI() {
+                if (!profile || profile.samples < 8) {
+                    ui.profileLine.textContent = "Collecting data…";
+                    return;
+                }
+                const side = profile.emaShotDir < -0.15 ? "Left" : (profile.emaShotDir > 0.15 ? "Right" : "Balanced");
+                const hx = Math.round(profile.emaHitX * 100);
+                ui.profileLine.textContent = `${profile.samples} hits • bias: ${side} • hit-x: ${hx}%`;
+            }
+            updateProfileUI();
+
+            ui.clearLearnBtn.addEventListener("click", resetProfile);
+
+            // -------------------- State --------------------
+            const state = {
+                diff: "normal",
+                scoreYou: 0,
+                scoreAI: 0,
+                running: false,
+                paused: true,
+                gameOver: false,
+                message: "Tap to serve",
+                last: performance.now(),
+                acc: 0,
+                pointerDown: false,
+                youTarget: { x: 0, y: 0 },
+                // internal tracking for learning (detect your hits)
+                lastPuckV: { vx: 0, vy: 0 },
+                lastHitBy: null,  // "you" | "ai"
+            };
+
+            // -------------------- Difficulty tuning --------------------
+            // Legendary uses learning profile + stronger adaptive.
+            function baseParamsByDifficulty(d) {
+                switch (d) {
+                    case "easy": return { speed: 1050, pressure: 0.35, predict: 0.45, shotPower: 0.70, adapt: 0.10, learn: 0.00 };
+                    case "normal": return { speed: 1250, pressure: 0.50, predict: 0.60, shotPower: 0.82, adapt: 0.14, learn: 0.00 };
+                    case "smart": return { speed: 1400, pressure: 0.62, predict: 0.72, shotPower: 0.90, adapt: 0.18, learn: 0.05 };
+                    case "hard": return { speed: 1550, pressure: 0.72, predict: 0.82, shotPower: 0.94, adapt: 0.22, learn: 0.08 };
+                    case "pro": return { speed: 1700, pressure: 0.82, predict: 0.90, shotPower: 0.97, adapt: 0.26, learn: 0.10 };
+                    case "legendary": return { speed: 1850, pressure: 0.90, predict: 0.95, shotPower: 0.99, adapt: 0.32, learn: 0.22 };
+                    default: return { speed: 1250, pressure: 0.50, predict: 0.60, shotPower: 0.82, adapt: 0.14, learn: 0.00 };
+                }
+            }
+
+            function effectiveAIParams() {
+                const base = baseParamsByDifficulty(state.diff);
+                // adaptive: if you lead, AI gets stronger; if AI leads, slightly relax but still competitive
+                const diffScore = (state.scoreYou - state.scoreAI); // positive => you leading
+                const boost = clamp(diffScore * base.adapt, -0.18, 0.40);
+
+                // legendary learns your bias and counters it by choosing target corners/banks accordingly.
+                let learnBoost = 0;
+                if (state.diff === "legendary") {
+                    learnBoost = clamp((profile.samples / 200), 0, 0.25); // grows over time
+                }
+
+                return {
+                    speed: base.speed * (1 + boost + learnBoost * 0.35),
+                    pressure: clamp(base.pressure + boost * 0.9 + learnBoost * 0.25, 0.30, 0.98),
+                    predict: clamp(base.predict + boost * 0.6 + learnBoost * 0.25, 0.35, 0.99),
+                    shotPower: clamp(base.shotPower + boost * 0.35 + learnBoost * 0.20, 0.65, 1.0),
+                    learn: base.learn,
+                };
+            }
+
+            // -------------------- Pointer controls (bottom half) --------------------
+            function setTarget(e) {
+                state.youTarget.x = e.clientX;
+                state.youTarget.y = e.clientY;
+            }
+
+            canvas.addEventListener("pointerdown", (e) => {
+                state.pointerDown = true;
+                setTarget(e);
+                if (state.running && state.paused && !state.gameOver) serve();
+            }, { passive: true });
+
+            canvas.addEventListener("pointermove", (e) => {
+                if (!state.pointerDown) return;
+                setTarget(e);
+            }, { passive: true });
+
+            canvas.addEventListener("pointerup", () => state.pointerDown = false, { passive: true });
+            canvas.addEventListener("pointercancel", () => state.pointerDown = false, { passive: true });
+
+            // desktop mouse hover
+            canvas.addEventListener("mousemove", (e) => {
+                if (state.pointerDown) return;
+                state.youTarget.x = e.clientX;
+                state.youTarget.y = e.clientY;
+            }, { passive: true });
+
+            // -------------------- Buttons --------------------
+            ui.resetBtn.addEventListener("click", () => {
+                state.scoreYou = 0;
+                state.scoreAI = 0;
+                ui.sYou.textContent = "0";
+                ui.sAI.textContent = "0";
+                state.gameOver = false;
+                state.paused = true;
+                state.message = "Tap to serve";
+                resetPositions();
+                showHUD(true);
+            });
+
+            ui.pauseBtn.addEventListener("click", () => {
+                if (!state.running) return;
+                if (state.gameOver) return;
+                togglePause();
+            });
+
+            ui.resumeBtn.addEventListener("click", () => togglePause(false));
+            ui.backToMenuBtn.addEventListener("click", () => backToMenu());
+
+            ui.installBtn.addEventListener("click", async () => {
+                if (!deferredPrompt) return;
+                deferredPrompt.prompt();
+                try { await deferredPrompt.userChoice; } catch { }
+                deferredPrompt = null;
+            });
+
+            ui.startBtn.addEventListener("click", () => {
+                state.diff = ui.diffSel.value;
+                ui.modeLabel.textContent = state.diff.toUpperCase();
+                state.running = true;
+                state.gameOver = false;
+                state.paused = true;
+                state.message = "Tap to serve";
+                ui.menu.classList.add("hide");
+                resetPositions();
+                showHUD(true);
+            });
+
+            function backToMenu() {
+                state.running = false;
+                state.paused = true;
+                state.gameOver = false;
+                state.message = "Tap to serve";
+                ui.pauseOverlay.classList.add("hide");
+                ui.menu.classList.remove("hide");
+                showHUD(true);
+                resetPositions();
+            }
+
+            // -------------------- Pause / Resume --------------------
+            function togglePause(force) {
+                const next = (typeof force === "boolean") ? force : !state.paused;
+                state.paused = next;
+
+                if (state.paused) {
+                    ui.pauseOverlay.classList.remove("hide");
+                    state.message = "Paused";
+                } else {
+                    ui.pauseOverlay.classList.add("hide");
+                    state.message = "";
+                }
+            }
+
+            function showHUD(show) {
+                ui.hud.classList.toggle("hide", !show);
+            }
+
+            // After first serve, keep HUD small but still visible (professional feel).
+            // If you want full-screen play, set this to false.
+            const HIDE_HUD_AFTER_SERVE = false;
+
+            // -------------------- Core helpers --------------------
+            function resetPositions() {
+                const { w, h } = dims();
+                puck.x = w / 2; puck.y = h / 2; puck.vx = 0; puck.vy = 0;
+                you.x = w / 2; you.y = h * 0.78; you.vx = you.vy = 0;
+                ai.x = w / 2; ai.y = h * 0.22; ai.vx = ai.vy = 0;
+                state.youTarget = { x: w / 2, y: h * 0.78 };
+                state.lastPuckV = { vx: 0, vy: 0 };
+                state.lastHitBy = null;
+            }
+
+            function serve() {
+                if (!state.running || !state.paused || state.gameOver) return;
+
+                // serve slight randomness, not “aim drift”
+                const dir = (Math.random() < 0.5) ? -1 : 1;
+                const ang = (Math.random() * 0.55 - 0.275);
+                const speed = 560;
+
+                puck.vx = Math.sin(ang) * speed;
+                puck.vy = dir * Math.cos(ang) * speed;
+
+                state.paused = false;
+                state.message = "";
+
+                if (HIDE_HUD_AFTER_SERVE) showHUD(false);
+            }
+
+            function collideDisc(pad, puckObj) {
+                const dx = puckObj.x - pad.x;
+                const dy = puckObj.y - pad.y;
+                const dist = Math.hypot(dx, dy);
+                const minD = pad.r + puckObj.r;
+                if (dist <= 0.0001 || dist >= minD) return false;
+
+                const nx = dx / dist;
+                const ny = dy / dist;
+
+                // separate
+                const overlap = (minD - dist);
+                puckObj.x += nx * overlap;
+                puckObj.y += ny * overlap;
+
+                // relative velocity
+                const rvx = puckObj.vx - pad.vx;
+                const rvy = puckObj.vy - pad.vy;
+                const vn = rvx * nx + rvy * ny;
+                if (vn > 0) return true;
+
+                const restitution = 0.985;
+                const j = -(1 + restitution) * vn;
+                puckObj.vx += j * nx;
+                puckObj.vy += j * ny;
+
+                // paddle transfer
+                puckObj.vx += pad.vx * 0.32;
+                puckObj.vy += pad.vy * 0.32;
+
+                // light tangential “spin”
+                const tx = -ny, ty = nx;
+                const vt = rvx * tx + rvy * ty;
+                puckObj.vx += tx * vt * 0.02;
+                puckObj.vy += ty * vt * 0.02;
+
+                const hit = clamp(Math.abs(vn) / 950, 0, 1);
+                sfx.hit(hit);
+                return true;
+            }
+
+            function puckWallsGoals() {
+                const { w, h } = dims();
+                const goalW = w * table.goalWidthFrac;
+                const gx1 = (w - goalW) / 2;
+                const gx2 = (w + goalW) / 2;
+
+                const inMouth = (puck.x > gx1 && puck.x < gx2);
+
+                // top goal => YOU scored
+                if (puck.y - puck.r <= table.wall) {
+                    if (inMouth) { onGoal("you"); return; }
+                    puck.y = table.wall + puck.r;
+                    puck.vy = Math.abs(puck.vy) * 0.985;
+                    sfx.wall();
+                }
+
+                // bottom goal => AI scored
+                if (puck.y + puck.r >= h - table.wall) {
+                    if (inMouth) { onGoal("ai"); return; }
+                    puck.y = (h - table.wall) - puck.r;
+                    puck.vy = -Math.abs(puck.vy) * 0.985;
+                    sfx.wall();
+                }
+
+                // sides
+                if (puck.x - puck.r <= table.wall) {
+                    puck.x = table.wall + puck.r;
+                    puck.vx = Math.abs(puck.vx) * 0.985;
+                    sfx.wall();
+                }
+                if (puck.x + puck.r >= w - table.wall) {
+                    puck.x = (w - table.wall) - puck.r;
+                    puck.vx = -Math.abs(puck.vx) * 0.985;
+                    sfx.wall();
+                }
+            }
+
+            function onGoal(who) {
+                sfx.goal();
+                if (who === "you") state.scoreYou++;
+                else state.scoreAI++;
+
+                ui.sYou.textContent = String(state.scoreYou);
+                ui.sAI.textContent = String(state.scoreAI);
+
+                if (state.scoreYou >= GAME.targetScore || state.scoreAI >= GAME.targetScore) {
+                    state.paused = true;
+                    state.gameOver = true;
+                    state.message = (state.scoreYou > state.scoreAI) ? "You win! Press Reset" : "AI wins! Press Reset";
+                    sfx.win();
+                    puck.vx = puck.vy = 0;
+                    showHUD(true);
+                    return;
+                }
+
+                resetPositions();
+                state.paused = true;
+                state.message = (who === "you") ? "Goal! Tap to serve" : "AI scored. Tap to serve";
+                showHUD(true);
+            }
+
+            function movePad(pad, target, dt, speed, half) {
+                const { w, h } = dims();
+                const mid = h / 2;
+
+                let tx = clamp(target.x, table.pad, w - table.pad);
+                let ty = target.y;
+
+                if (half === "bottom") ty = clamp(ty, mid + table.pad, h - table.pad);
+                else ty = clamp(ty, table.pad, mid - table.pad);
+
+                const dx = tx - pad.x;
+                const dy = ty - pad.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist > 0.001) {
+                    const step = Math.min(speed * dt, dist);
+                    const nx = dx / dist, ny = dy / dist;
+                    const nxp = pad.x + nx * step;
+                    const nyp = pad.y + ny * step;
+                    pad.vx = (nxp - pad.x) / dt;
+                    pad.vy = (nyp - pad.y) / dt;
+                    pad.x = nxp;
+                    pad.y = nyp;
+                } else {
+                    pad.vx *= 0.45;
+                    pad.vy *= 0.45;
+                }
+            }
+
+            // -------------------- AI prediction / bank shots / learning counter --------------------
+            function predictPuckXAtY(targetY) {
+                // lightweight simulation with wall bounces
+                const { w } = dims();
+                const left = table.wall + puck.r;
+                const right = (w - table.wall) - puck.r;
+
+                let x = puck.x, y = puck.y, vx = puck.vx, vy = puck.vy;
+                if (Math.abs(vy) < 15) return x;
+
+                for (let i = 0; i < 160; i++) {
+                    const dt = 1 / 240;
+                    x += vx * dt;
+                    y += vy * dt;
+
+                    if (x <= left) { x = left + (left - x); vx = Math.abs(vx); }
+                    if (x >= right) { x = right - (x - right); vx = -Math.abs(vx); }
+
+                    if ((vy < 0 && y <= targetY) || (vy > 0 && y >= targetY)) return x;
+                }
+                return x;
+            }
+
+            function reflectXForBank(targetX) {
+                const { w } = dims();
+                const left = table.wall + puck.r;
+                const right = (w - table.wall) - puck.r;
+                // pick bank side deterministically based on puck position
+                const goLeft = puck.x > w / 2;
+                return goLeft ? (left - (targetX - left)) : (right + (right - targetX));
+            }
+
+            function legendaryCounterCorner(goalLeftX, goalRightX) {
+                // If player tends to shoot to RIGHT, AI should defend/right and attack/left (and vice versa).
+                // emaShotDir: negative => player tends left; positive => tends right
+                if (profile.samples < 10) return (puck.x > (goalLeftX + goalRightX) / 2) ? goalLeftX : goalRightX;
+
+                if (profile.emaShotDir > 0.12) {
+                    // player likes right -> AI targets left corner more often
+                    return goalLeftX;
+                }
+                if (profile.emaShotDir < -0.12) {
+                    // player likes left -> AI targets right corner more often
+                    return goalRightX;
+                }
+                // balanced
+                return (puck.x > (goalLeftX + goalRightX) / 2) ? goalLeftX : goalRightX;
+            }
+
+            function computeAiTarget() {
+                const { w, h } = dims();
+                const midY = h / 2;
+                const P = effectiveAIParams();
+
+                // Defensive intercept line
+                const interceptY = h * 0.26;
+
+                const puckInAiHalf = (puck.y < midY);
+                const puckComingUp = (puck.vy < -40);
+
+                // defend if threatened
+                if (puckComingUp || puckInAiHalf) {
+                    const px = predictPuckXAtY(interceptY);
+                    return { x: clamp(px, table.pad, w - table.pad), y: clamp(interceptY, table.pad, midY - table.pad), speed: P.speed };
+                }
+
+                // otherwise pressure forward (aggressive)
+                const pressureY = clamp(h * (0.26 + 0.18 * P.pressure), table.pad, midY - table.pad);
+                return { x: clamp(puck.x, table.pad, w - table.pad), y: pressureY, speed: P.speed };
+            }
+
+            function aiShotAssist() {
+                const { w, h } = dims();
+                const P = effectiveAIParams();
+                const dx = puck.x - ai.x;
+                const dy = puck.y - ai.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist > 140) return null;
+
+                const goalW = w * table.goalWidthFrac;
+                const gx1 = (w - goalW) / 2;
+                const gx2 = (w + goalW) / 2;
+
+                // choose target corner
+                const targetXCorner = (state.diff === "legendary")
+                    ? legendaryCounterCorner(gx1 + 12, gx2 - 12)
+                    : (puck.x > w / 2 ? (gx1 + 12) : (gx2 - 12));
+
+                const targetY = h - table.wall - 6;
+
+                // bank if puck far from center
+                const offCenter = Math.abs(puck.x - w / 2) / (w / 2);
+                const useBank = offCenter > 0.35;
+
+                const aimX = useBank ? reflectXForBank(targetXCorner) : targetXCorner;
+                const aimY = targetY;
+
+                // place AI behind puck to drive toward aim
+                const vx = aimX - puck.x;
+                const vy = aimY - puck.y;
+                const L = Math.hypot(vx, vy) || 1;
+                const backoff = 28 * (0.9 + 0.2 * P.shotPower);
+
+                const tx = puck.x - (vx / L) * backoff;
+                const ty = puck.y - (vy / L) * backoff;
+
+                // clamp to AI half
+                const midY = h / 2;
+                return {
+                    x: clamp(tx, table.pad, w - table.pad),
+                    y: clamp(ty, table.pad, midY - table.pad),
+                };
+            }
+
+            // -------------------- Learning: update profile when YOU hit puck --------------------
+            function updateLearningOnHit() {
+                const P = baseParamsByDifficulty(state.diff);
+                const learnRate = P.learn;
+                if (learnRate <= 0) return;
+
+                // Detect "player hit": last hitter is you
+                // We'll update after collision sets puck velocity.
+                const { w, h } = dims();
+                const nx = clamp(you.x / w, 0, 1);
+
+                const dir = clamp(puck.vx / (Math.abs(puck.vx) + 250), -1, 1); // -1..+1
+                const ang = clamp(puck.vx / (Math.abs(puck.vy) + 250), -1, 1);
+
+                const mid = h / 2;
+                const aggression = clamp((mid - you.y) / mid, -1, 1); // closer to mid => more aggressive
+
+                const alpha = learnRate;
+
+                profile.samples = (profile.samples || 0) + 1;
+                profile.emaHitX = profile.emaHitX + alpha * (nx - profile.emaHitX);
+                profile.emaShotDir = profile.emaShotDir + alpha * (dir - profile.emaShotDir);
+                profile.emaShotAngle = profile.emaShotAngle + alpha * (ang - profile.emaShotAngle);
+                profile.emaAggression = profile.emaAggression + alpha * (aggression - profile.emaAggression);
+                profile.lastUpdate = Date.now();
+
+                // Persist occasionally
+                if (profile.samples % 5 === 0) saveProfile(profile);
+                updateProfileUI();
+            }
+
+            // -------------------- Loop (fixed timestep) --------------------
+            function step(dt) {
+                const { w, h } = dims();
+                const mid = h / 2;
+
+                // clamp your target to bottom half
+                const tx = clamp(state.youTarget.x || you.x, table.pad, w - table.pad);
+                const ty = clamp(state.youTarget.y || you.y, mid + table.pad, h - table.pad);
+
+                // move player (smooth + responsive)
+                movePad(you, { x: tx, y: ty }, dt, 2600, "bottom");
+
+                // move AI (predict + pressure + shot assist)
+                const P = effectiveAIParams();
+                const base = computeAiTarget();
+                const shot = aiShotAssist();
+                const aiTarget = shot || { x: base.x, y: base.y };
+
+                movePad(ai, aiTarget, dt, P.speed, "top");
+
+                if (state.paused || state.gameOver) return;
+
+                // save old velocity for hit detection
+                state.lastPuckV.vx = puck.vx;
+                state.lastPuckV.vy = puck.vy;
+
+                // integrate puck
+                puck.x += puck.vx * dt;
+                puck.y += puck.vy * dt;
+
+                // friction (air feel)
+                const fr = Math.exp(-0.68 * dt);
+                puck.vx *= fr;
+                puck.vy *= fr;
+
+                // clamp speed
+                const s = Math.hypot(puck.vx, puck.vy);
+                if (s > puck.max) {
+                    const k = puck.max / s;
+                    puck.vx *= k; puck.vy *= k;
+                }
+
+                // collisions (detect your hit)
+                const hitYou = collideDisc(you, puck);
+                if (hitYou) {
+                    // if puck velocity changed a lot, treat as a meaningful hit
+                    const dv = Math.hypot(puck.vx - state.lastPuckV.vx, puck.vy - state.lastPuckV.vy);
+                    if (dv > 60) updateLearningOnHit();
+                }
+                collideDisc(ai, puck);
+
+                // walls/goals
+                puckWallsGoals();
+
+                // prevent dead puck
+                if (Math.hypot(puck.vx, puck.vy) < 18) {
+                    puck.vx += (Math.random() * 2 - 1) * 10;
+                    puck.vy += (Math.random() * 2 - 1) * 10;
+                }
+            }
+
+            function draw() {
+                const { w, h } = dims();
+                const mid = h / 2;
+
+                // surface
+                ctx.fillStyle = "#0f2740";
+                ctx.fillRect(0, 0, w, h);
+
+                // subtle gradients
+                const g = ctx.createLinearGradient(0, 0, 0, h);
+                g.addColorStop(0, "rgba(255,255,255,.04)");
+                g.addColorStop(0.5, "rgba(255,255,255,.00)");
+                g.addColorStop(1, "rgba(0,0,0,.18)");
+                ctx.fillStyle = g;
+                ctx.fillRect(0, 0, w, h);
+
+                // walls
+                ctx.fillStyle = "rgba(255,255,255,.10)";
+                ctx.fillRect(0, 0, w, table.wall);
+                ctx.fillRect(0, h - table.wall, w, table.wall);
+                ctx.fillRect(0, 0, table.wall, h);
+                ctx.fillRect(w - table.wall, 0, table.wall, h);
+
+                // goals
+                const goalW = w * table.goalWidthFrac;
+                const gx1 = (w - goalW) / 2;
+                ctx.fillStyle = "#071522";
+                ctx.fillRect(gx1, 0, goalW, table.wall);
+                ctx.fillRect(gx1, h - table.wall, goalW, table.wall);
+
+                // center
+                ctx.strokeStyle = "rgba(233,240,255,.35)";
+                ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(0, mid); ctx.lineTo(w, mid); ctx.stroke();
+                ctx.beginPath(); ctx.arc(w / 2, mid, 62, 0, Math.PI * 2); ctx.stroke();
+
+                // pads (subtle)
+                ctx.fillStyle = "rgba(255,255,255,.03)";
+                ctx.fillRect(0, mid, w, h - mid);
+
+                drawPaddle(ai, "#e9f0ff", "#0b0f14");
+                drawPaddle(you, "#ffd66e", "#0b0f14");
+
+                // puck
+                ctx.save();
+                ctx.globalAlpha = 0.22;
+                ctx.fillStyle = "#000";
+                ctx.beginPath(); ctx.arc(puck.x, puck.y + 3, puck.r, 0, Math.PI * 2); ctx.fill();
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = "#0b0f14";
+                ctx.beginPath(); ctx.arc(puck.x, puck.y, puck.r, 0, Math.PI * 2); ctx.fill();
+                ctx.globalAlpha = 0.22;
+                ctx.fillStyle = "#e9f0ff";
+                ctx.beginPath(); ctx.arc(puck.x - 3, puck.y - 3, puck.r * 0.55, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+
+                // message
+                if (state.running && state.message) {
+                    ctx.save();
+                    ctx.fillStyle = "rgba(0,0,0,.55)";
+                    ctx.fillRect(0, mid - 36, w, 72);
+                    ctx.fillStyle = "#e9f0ff";
+                    ctx.font = "950 18px system-ui,-apple-system,Segoe UI,Roboto,sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(state.message, w / 2, mid);
+                    ctx.restore();
+                }
+            }
+
+            function drawPaddle(p, main, inner) {
+                // shadow
+                ctx.save();
+                ctx.globalAlpha = 0.25;
+                ctx.fillStyle = "#000";
+                ctx.beginPath(); ctx.arc(p.x, p.y + 3, p.r, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+
+                // body
+                ctx.fillStyle = main;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+
+                // inner ring
+                ctx.fillStyle = inner;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.45, 0, Math.PI * 2); ctx.fill();
+
+                // highlight
+                ctx.globalAlpha = 0.18;
+                ctx.fillStyle = "#fff";
+                ctx.beginPath(); ctx.arc(p.x - p.r * 0.25, p.y - p.r * 0.25, p.r * 0.35, 0, Math.PI * 2); ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+
+            function loop(now) {
+                const frameDt = Math.min(GAME.maxFrame, (now - state.last) / 1000);
+                state.last = now;
+                state.acc += frameDt;
+
+                while (state.acc >= GAME.fixedDt) {
+                    step(GAME.fixedDt);
+                    state.acc -= GAME.fixedDt;
+                }
+
+                draw();
+                requestAnimationFrame(loop);
+            }
+
+            // -------------------- Init --------------------
+            function init() {
+                ui.targetLabel.textContent = String(GAME.targetScore);
+                ui.modeLabel.textContent = ui.diffSel.value.toUpperCase();
+                ui.sYou.textContent = "0";
+                ui.sAI.textContent = "0";
+                resetPositions();
+                requestAnimationFrame(loop);
+            }
+
+            init();
+
+            // -------------------- Installable UX --------------------
+            // If you want an even more “app-like” feel, the PWA install does that.
+        })();
+    </script>
+</body>
+
+</html>
