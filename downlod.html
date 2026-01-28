@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="theme-color" content="#070b12" />
+    <title>Download Air Hockey Pro</title>
+    <style>
+        :root {
+            --bg: #070b12;
+            --card: rgba(18, 26, 36, .92);
+            --line: rgba(255, 255, 255, .12);
+            --text: #e9f0ff;
+            --muted: #a9b6cc;
+            --gold: #ffd66e;
+            --shadow: 0 18px 60px rgba(0, 0, 0, .45);
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif
+        }
+
+        .wrap {
+            min-height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px
+        }
+
+        .card {
+            width: min(720px, 94vw);
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+            overflow: hidden
+        }
+
+        .top {
+            padding: 18px 18px 12px;
+            border-bottom: 1px solid var(--line);
+            background: rgba(255, 255, 255, .03)
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 20px;
+            letter-spacing: .2px
+        }
+
+        p {
+            margin: 10px 0 0;
+            color: var(--muted);
+            line-height: 1.5
+        }
+
+        .body {
+            padding: 14px 18px 18px
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap
+        }
+
+        .btn {
+            appearance: none;
+            border: 1px solid rgba(255, 255, 255, .14);
+            background: rgba(18, 26, 36, .65);
+            color: var(--text);
+            padding: 12px 14px;
+            border-radius: 14px;
+            font-weight: 900;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 10px 22px rgba(0, 0, 0, .18);
+            text-decoration: none;
+            flex: 1 1 220px;
+        }
+
+        .btn.primary {
+            border-color: rgba(255, 214, 110, .30);
+            background: rgba(255, 214, 110, .14)
+        }
+
+        .btn:active {
+            transform: translateY(1px)
+        }
+
+        .box {
+            margin-top: 12px;
+            border: 1px solid rgba(255, 255, 255, .10);
+            background: rgba(0, 0, 0, .18);
+            border-radius: 14px;
+            padding: 12px
+        }
+
+        .box h2 {
+            margin: 0 0 8px;
+            font-size: 13px;
+            letter-spacing: .2px
+        }
+
+        .steps {
+            margin: 0;
+            padding-left: 18px;
+            color: var(--muted);
+            line-height: 1.55
+        }
+
+        .hide {
+            display: none !important
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, .12);
+            background: rgba(255, 255, 255, .06);
+            color: rgba(233, 240, 255, .85);
+            font-weight: 900;
+            font-size: 12px
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <div class="card">
+            <div class="top">
+                <h1>Air Hockey Pro</h1>
+                <p id="statusLine">Install on your device for the best full-screen gaming experience.</p>
+            </div>
+
+            <div class="body">
+                <div class="row">
+                    <a class="btn" href="./index.html">Open Game</a>
+                    <button class="btn primary" id="installPwaBtn">Install App</button>
+                    <!-- Optional APK link (only if you host an APK file) -->
+                    <a class="btn" id="apkBtn" href="./air_hockey_pro.apk" download>Download APK</a>
+                </div>
+
+                <div class="box" id="installedBox">
+                    <h2><span class="badge">Installed</span></h2>
+                    <p style="margin:8px 0 0;color:var(--muted)">This device already has the app installed. You can open
+                        it from your home screen / app drawer.</p>
+                </div>
+
+                <div class="box" id="howToBox">
+                    <h2>Install tips (if Install button doesn’t appear)</h2>
+                    <ol class="steps" id="stepsList"></ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const installBtn = document.getElementById("installPwaBtn");
+            const apkBtn = document.getElementById("apkBtn");
+            const statusLine = document.getElementById("statusLine");
+            const installedBox = document.getElementById("installedBox");
+            const howToBox = document.getElementById("howToBox");
+            const stepsList = document.getElementById("stepsList");
+
+            // If you are NOT hosting an APK file at ./app-release-signed.apk, hide this button:
+            // apkBtn.classList.add("hide");
+
+            function isInstalled() {
+                return window.matchMedia("(display-mode: standalone)").matches ||
+                    window.navigator.standalone === true;
+            }
+
+            function isIOS() {
+                return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            }
+
+            function fillSteps() {
+                stepsList.innerHTML = "";
+                const steps = [];
+
+                if (isIOS()) {
+                    steps.push("On Safari, tap Share.");
+                    steps.push("Tap Add to Home Screen.");
+                    steps.push("Open Air Hockey Pro from the home screen icon.");
+                } else {
+                    steps.push("Open browser menu (three dots).");
+                    steps.push("Tap Install app / Add to Home screen.");
+                    steps.push("Open Air Hockey Pro from the home screen icon.");
+                }
+
+                for (const s of steps) {
+                    const li = document.createElement("li");
+                    li.textContent = s;
+                    stepsList.appendChild(li);
+                }
+            }
+
+            let deferredPrompt = null;
+
+            window.addEventListener("beforeinstallprompt", (e) => {
+                // Chromium browsers (Chrome/Edge/Brave/Samsung Internet)
+                e.preventDefault();
+                deferredPrompt = e;
+                installBtn.classList.remove("hide");
+            });
+
+            installBtn.addEventListener("click", async () => {
+                if (!deferredPrompt) {
+                    // No prompt available -> user must use browser UI
+                    statusLine.textContent = "Install prompt isn’t available in this browser. Use the browser menu to install.";
+                    return;
+                }
+                deferredPrompt.prompt();
+                try { await deferredPrompt.userChoice; } catch { }
+                deferredPrompt = null;
+            });
+
+            window.addEventListener("appinstalled", () => {
+                statusLine.textContent = "Installed! Open it from your home screen / app drawer.";
+                installBtn.classList.add("hide");
+                installedBox.classList.remove("hide");
+            });
+
+            // Initial state
+            fillSteps();
+
+            if (isInstalled()) {
+                statusLine.textContent = "Already installed on this device.";
+                installBtn.classList.add("hide");
+                installedBox.classList.remove("hide");
+            } else {
+                installedBox.classList.add("hide");
+                // If the browser never fires beforeinstallprompt, keep button hidden and show tips.
+                installBtn.classList.add("hide");
+            }
+        })();
+    </script>
+</body>
+
+</html>
