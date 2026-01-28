@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <meta name="theme-color" content="#070b12" />
     <link rel="manifest" href="manifest.webmanifest" />
-    <title>Air Hockey Pro (PWA)</title>
+    <title>Air Hockey Pro</title>
 
     <style>
         :root {
@@ -146,19 +146,6 @@
             overflow: hidden;
         }
 
-        .tag {
-            font-weight: 980;
-            letter-spacing: .6px;
-            font-size: 12px;
-            padding: 5px 10px;
-            border-radius: 999px;
-            border: 1px solid rgba(255, 255, 255, .12);
-            background: rgba(255, 255, 255, .06);
-            text-transform: uppercase;
-            flex: 0 0 auto;
-            white-space: nowrap;
-        }
-
         .scoreNums {
             display: flex;
             align-items: baseline;
@@ -225,6 +212,7 @@
             pointer-events: none;
             transition: transform .22s ease;
             box-sizing: border-box;
+            will-change: transform;
         }
 
         .sheet.open {
@@ -350,11 +338,6 @@
                 font-size: 18px;
             }
 
-            .tag {
-                font-size: 11px;
-                padding: 5px 9px;
-            }
-
             select,
             label.chk {
                 min-width: 140px;
@@ -380,7 +363,6 @@
     <div class="topbar">
         <div class="scorebar">
             <div class="scorePill" aria-live="polite">
-                <div class="tag" id="modeTag">NORMAL</div>
                 <div class="scoreNums">
                     <div class="side">
                         <div class="label">Player</div>
@@ -390,11 +372,6 @@
                     <div class="side">
                         <div class="label">AI</div>
                         <div class="num" id="sAI">0</div>
-                    </div>
-                    <div class="sep">•</div>
-                    <div class="side" style="min-width:86px;">
-                        <div class="label">Style</div>
-                        <div class="num" id="personaTag" style="font-size:12px; font-weight:1000;">DEF</div>
                     </div>
                 </div>
             </div>
@@ -487,6 +464,11 @@
                 window.addEventListener("load", async () => {
                     try { await navigator.serviceWorker.register("./sw.js"); } catch { }
                 });
+
+                // reload once when new SW takes control (keeps updates smooth)
+                navigator.serviceWorker.addEventListener("controllerchange", () => {
+                    location.reload();
+                });
             }
 
             const canvas = document.getElementById("c");
@@ -495,8 +477,6 @@
             const ui = {
                 sYou: document.getElementById("sYou"),
                 sAI: document.getElementById("sAI"),
-                modeTag: document.getElementById("modeTag"),
-                personaTag: document.getElementById("personaTag"),
 
                 menuBtn: document.getElementById("menuBtn"),
                 backdrop: document.getElementById("backdrop"),
@@ -638,18 +618,6 @@
                 toastT: 0,
             };
 
-            function shortPersonaTag(p) {
-                if (p === "defensive") return "DEF";
-                if (p === "aggressive") return "AGG";
-                return "TRICK";
-            }
-
-            function applyModeTags() {
-                ui.modeTag.textContent = state.diff.toUpperCase();
-                ui.personaTag.textContent = shortPersonaTag(state.persona);
-            }
-            applyModeTags();
-
             function showToast(text, seconds = 1.2) {
                 state.toastText = text;
                 state.toastT = seconds;
@@ -697,7 +665,7 @@
                 };
             }
 
-            // Player controls: drag on bottom half
+            // Player controls
             function setTargetFromEvent(e) {
                 state.youTarget.x = e.clientX;
                 state.youTarget.y = e.clientY;
@@ -718,68 +686,231 @@
             canvas.addEventListener("pointerup", () => state.pointerDown = false, { passive: true });
             canvas.addEventListener("pointercancel", () => state.pointerDown = false, { passive: true });
 
-            // Bottom sheet controls
-            let sheetDrag = { active: false, id: null, startY: 0, dy: 0 };
+            // ===== Bottom sheet: velocity flick + momentum + rubber band + fling anywhere =====
+            const RUBBER_MAX_UP = 70;   // visual max overscroll up
+            const CLOSE_DIST = 90;      // px
+            const FLICK_V = 1.10;       // px/ms
+            const FLICK_MIN_DY = 18;    // px even small flick closes
+
+            let sheetDrag = {
+                active: false,
+                id: null,
+                startY: 0,
+                dy: 0,
+                lastY: 0,
+                lastT: 0,
+                vy: 0,
+                raf: 0
+            };
+
+            function rubberBand(upDy) {
+                // upDy is negative. Apply soft resistance.
+                const a = Math.min(RUBBER_MAX_UP, Math.sqrt(Math.max(0, -upDy)) * 9);
+                return -a;
+            }
+
+            function isInteractive(el) {
+                if (!el) return false;
+                return !!el.closest("button, a, input, select, textarea, label, option");
+            }
+
+            function sheetSetY(px) {
+                ui.sheet.style.transform = `translateX(-50%) translateY(${px}px)`;
+            }
+
+            function sheetSnapOpen() {
+                ui.sheet.style.transition = "";
+                ui.sheet.classList.add("open");
+                ui.backdrop.classList.add("open");
+                ui.sheet.style.transform = "translateX(-50%) translateY(0%)";
+            }
+
             function openSheet() {
                 state.paused = true;
                 ui.backdrop.classList.add("open");
                 ui.sheet.classList.add("open");
+                ui.sheet.style.transition = "";
                 ui.sheet.style.transform = "translateX(-50%) translateY(0%)";
             }
+
+            function stopSheetAnim() {
+                if (sheetDrag.raf) cancelAnimationFrame(sheetDrag.raf);
+                sheetDrag.raf = 0;
+            }
+
             function closeSheet() {
+                stopSheetAnim();
                 ui.backdrop.classList.remove("open");
                 ui.sheet.classList.remove("open");
+                ui.sheet.style.transition = "";
                 ui.sheet.style.transform = "";
                 sheetDrag.active = false;
                 sheetDrag.id = null;
                 sheetDrag.dy = 0;
+                sheetDrag.vy = 0;
             }
 
             ui.menuBtn.addEventListener("click", openSheet);
             ui.closeSheetBtn.addEventListener("click", closeSheet);
             ui.backdrop.addEventListener("click", closeSheet);
 
-            // Swipe down on grab area to close
-            ui.grabWrap.addEventListener("pointerdown", (e) => {
-                e.preventDefault();
-                ui.grabWrap.setPointerCapture(e.pointerId);
+            function beginSheetDrag(e) {
+                stopSheetAnim();
+                ui.sheet.style.transition = "none";
+
                 sheetDrag.active = true;
                 sheetDrag.id = e.pointerId;
                 sheetDrag.startY = e.clientY;
+                sheetDrag.lastY = e.clientY;
+                sheetDrag.lastT = performance.now();
                 sheetDrag.dy = 0;
-            }, { passive: false });
+                sheetDrag.vy = 0;
 
-            ui.grabWrap.addEventListener("pointermove", (e) => {
-                if (!sheetDrag.active || e.pointerId !== sheetDrag.id) return;
-                const dy = Math.max(0, e.clientY - sheetDrag.startY);
-                sheetDrag.dy = dy;
-
-                // translate the sheet down by pixels for native feel
-                ui.sheet.style.transition = "none";
-                ui.sheet.style.transform = `translateX(-50%) translateY(${dy}px)`;
-            }, { passive: true });
-
-            function endSheetDrag() {
-                if (!sheetDrag.active) return;
-                ui.sheet.style.transition = ""; // restore CSS transition
-
-                // threshold to close
-                if (sheetDrag.dy > 90) {
-                    closeSheet();
-                } else {
-                    // snap back open
-                    ui.sheet.style.transform = "translateX(-50%) translateY(0%)";
-                    // keep open
-                    ui.sheet.classList.add("open");
-                    ui.backdrop.classList.add("open");
-                }
-                sheetDrag.active = false;
-                sheetDrag.id = null;
-                sheetDrag.dy = 0;
+                // capture on the actual element receiving pointerdown
+                try { e.currentTarget.setPointerCapture(e.pointerId); } catch { }
             }
 
+            function moveSheetDrag(e) {
+                if (!sheetDrag.active || e.pointerId !== sheetDrag.id) return;
+
+                const now = performance.now();
+                const dt = Math.max(1, now - sheetDrag.lastT);
+                const dyStep = e.clientY - sheetDrag.lastY;
+                sheetDrag.vy = dyStep / dt; // px/ms, down positive
+                sheetDrag.lastY = e.clientY;
+                sheetDrag.lastT = now;
+
+                const rawDy = e.clientY - sheetDrag.startY;
+
+                let dy = rawDy;
+                if (dy < 0) dy = rubberBand(dy);
+
+                sheetDrag.dy = dy;
+                sheetSetY(dy);
+            }
+
+            function momentumOrSnap() {
+                // Decide close vs momentum vs snap-back
+                const dy = sheetDrag.dy;
+                const v0 = sheetDrag.vy;
+
+                const flickDown = v0 > FLICK_V;
+                const movedEnough = dy > CLOSE_DIST;
+                const flickClose = flickDown && dy > FLICK_MIN_DY;
+
+                if (movedEnough || flickClose) {
+                    closeSheet();
+                    return;
+                }
+
+                // If dragged upward (overscroll), just snap back open
+                if (dy < 0) {
+                    ui.sheet.style.transition = "";
+                    sheetSnapOpen();
+                    return;
+                }
+
+                // Momentum if released with some downward velocity
+                if (dy > 0 && v0 > 0.20) {
+                    const t0 = performance.now();
+                    let y = dy;
+                    let v = v0;           // px/ms
+                    const friction = 0.006; // velocity decay per ms (tuned)
+
+                    const tick = (t) => {
+                        const dt = Math.min(34, t - t0); // guard
+                        // integrate with actual dt between frames
+                    };
+
+                    let last = performance.now();
+                    const frame = (now) => {
+                        const dtMs = Math.min(34, now - last);
+                        last = now;
+
+                        // exponential-ish damping
+                        v = v * Math.exp(-friction * dtMs);
+
+                        y += v * dtMs;
+
+                        // cap downward travel so it doesn't go crazy
+                        y = Math.min(y, 240);
+
+                        // If it crosses close threshold while coasting -> close
+                        if (y > CLOSE_DIST + 18 && v > 0.25) {
+                            closeSheet();
+                            return;
+                        }
+
+                        // if velocity dies, snap back
+                        if (v < 0.06) {
+                            ui.sheet.style.transition = "";
+                            sheetSnapOpen();
+                            return;
+                        }
+
+                        sheetSetY(y);
+                        sheetDrag.raf = requestAnimationFrame(frame);
+                    };
+
+                    sheetDrag.raf = requestAnimationFrame(frame);
+                    return;
+                }
+
+                // Default snap back open
+                ui.sheet.style.transition = "";
+                sheetSnapOpen();
+            }
+
+            function endSheetDrag(e) {
+                if (!sheetDrag.active || e.pointerId !== sheetDrag.id) return;
+                try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { }
+                sheetDrag.active = false;
+                sheetDrag.id = null;
+
+                ui.sheet.style.transition = ""; // restore CSS transition for snap
+                momentumOrSnap();
+
+                sheetDrag.dy = 0;
+                sheetDrag.vy = 0;
+            }
+
+            // 1) Grab handle: always draggable
+            ui.grabWrap.addEventListener("pointerdown", (e) => {
+                e.preventDefault();
+                beginSheetDrag(e);
+            }, { passive: false });
+
+            ui.grabWrap.addEventListener("pointermove", moveSheetDrag, { passive: true });
             ui.grabWrap.addEventListener("pointerup", endSheetDrag, { passive: true });
             ui.grabWrap.addEventListener("pointercancel", endSheetDrag, { passive: true });
+
+            // 2) Fling anywhere on sheet (optional): only if not starting on interactive control
+            ui.sheetCard.addEventListener("pointerdown", (e) => {
+                // if menu closed, ignore
+                if (!ui.sheet.classList.contains("open")) return;
+
+                // if user started on buttons/selects, don't hijack
+                // (grabWrap is already handled separately)
+                if (isInteractive(e.target) || e.target.closest("#grabWrap")) return;
+
+                e.preventDefault();
+                beginSheetDrag(e);
+            }, { passive: false });
+
+            ui.sheetCard.addEventListener("pointermove", (e) => {
+                if (!sheetDrag.active) return;
+                moveSheetDrag(e);
+            }, { passive: true });
+
+            ui.sheetCard.addEventListener("pointerup", (e) => {
+                if (!sheetDrag.active) return;
+                endSheetDrag(e);
+            }, { passive: true });
+
+            ui.sheetCard.addEventListener("pointercancel", (e) => {
+                if (!sheetDrag.active) return;
+                endSheetDrag(e);
+            }, { passive: true });
 
             // Menu actions
             ui.startResumeBtn.addEventListener("click", () => {
@@ -790,7 +921,7 @@
                     resetPositions();
                     showToast("Tap to serve", 1.0);
                 } else {
-                    if (!state.gameOver) state.paused = true; // still waiting for serve if needed
+                    if (!state.gameOver) state.paused = true;
                     showToast("Tap to serve", 1.0);
                 }
                 closeSheet();
@@ -807,8 +938,8 @@
                 closeSheet();
             });
 
-            ui.diffSel.addEventListener("change", () => { state.diff = ui.diffSel.value; applyModeTags(); });
-            ui.personaSel.addEventListener("change", () => { state.persona = ui.personaSel.value; applyModeTags(); });
+            ui.diffSel.addEventListener("change", () => { state.diff = ui.diffSel.value; });
+            ui.personaSel.addEventListener("change", () => { state.persona = ui.personaSel.value; });
 
             ui.resetLearningBtn.addEventListener("click", () => {
                 try { localStorage.removeItem(PROFILE_KEY); } catch { }
@@ -959,7 +1090,7 @@
                 }
             }
 
-            // AI
+            // AI helpers
             function predictPuckXAtY(targetY) {
                 const { w } = dims();
                 const left = table.wall + puck.r;
@@ -1073,7 +1204,6 @@
                 const { w, h } = dims();
                 const mid = h / 2;
 
-                // decrement toast timer
                 if (state.toastT > 0) state.toastT = Math.max(0, state.toastT - dt);
 
                 // Player moves via drag target (bottom half)
@@ -1181,12 +1311,12 @@
 
                 drawPuck();
 
-                // Small “Tap to Serve” indicator near player paddle (instead of center text)
+                // Small “Tap to Serve” indicator near player paddle
                 if (state.running && state.paused && !state.gameOver && !ui.sheet.classList.contains("open")) {
                     drawServeHint();
                 }
 
-                // Toasts near player paddle (goals / win text stays near paddle too)
+                // Toasts near player paddle
                 if (state.toastT > 0 && state.toastText) {
                     drawToastNearPaddle(state.toastText, state.toastT);
                 }
@@ -1200,7 +1330,7 @@
 
                 ctx.save();
                 ctx.font = "900 13px system-ui,-apple-system,Segoe UI,Roboto,sans-serif";
-                const padX = 12, padY = 8;
+                const padX = 12;
                 const tw = ctx.measureText(text).width;
                 const bw = tw + padX * 2;
                 const bh = 28;
@@ -1208,7 +1338,6 @@
                 const x = px - bw / 2;
                 const y = py - bh / 2;
 
-                // bubble
                 ctx.globalAlpha = 0.92;
                 roundRect(ctx, x, y, bw, bh, 999);
                 ctx.fillStyle = "rgba(18,26,36,.84)";
@@ -1217,14 +1346,12 @@
                 ctx.lineWidth = 1;
                 ctx.stroke();
 
-                // tiny glow line
                 ctx.globalAlpha = 0.45;
                 ctx.strokeStyle = "rgba(255,214,110,.25)";
                 ctx.lineWidth = 2;
                 roundRect(ctx, x + 2, y + 2, bw - 4, bh - 4, 999);
                 ctx.stroke();
 
-                // text
                 ctx.globalAlpha = 1;
                 ctx.fillStyle = "rgba(233,240,255,.92)";
                 ctx.textAlign = "center";
@@ -1242,7 +1369,7 @@
                 ctx.save();
                 ctx.globalAlpha = 0.88 * a;
                 ctx.font = "950 13px system-ui,-apple-system,Segoe UI,Roboto,sans-serif";
-                const padX = 12, padY = 8;
+                const padX = 12;
                 const tw = ctx.measureText(text).width;
                 const bw = tw + padX * 2;
                 const bh = 30;
