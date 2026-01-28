@@ -11,13 +11,14 @@
     <style>
         :root {
             --bg: #070b12;
-            --panel: rgba(18, 26, 36, .78);
+            --panel: rgba(18, 26, 36, .82);
+            --panel2: rgba(18, 26, 36, .62);
             --line: rgba(255, 255, 255, .12);
             --text: #e9f0ff;
             --muted: #a9b6cc;
             --gold: #ffd66e;
+            --ice: #cfe6ff;
             --blue: #2aa5ff;
-            --red: #ff4b6e;
             --shadow: 0 18px 60px rgba(0, 0, 0, .45);
             --radius: 16px;
         }
@@ -57,7 +58,7 @@
             touch-action: none;
         }
 
-        /* Topbar with neon scoreboard */
+        /* ===== TOP BAR ===== */
         .topbar {
             position: fixed;
             top: env(safe-area-inset-top, 0px);
@@ -69,9 +70,9 @@
             justify-content: space-between;
             z-index: 10;
             pointer-events: none;
+            gap: 10px;
         }
 
-        .leftBtns,
         .rightBtns {
             display: flex;
             gap: 8px;
@@ -83,7 +84,7 @@
             background: rgba(18, 26, 36, .65);
             border: 1px solid rgba(255, 255, 255, .14);
             color: var(--text);
-            padding: 10px 10px;
+            padding: 10px 12px;
             border-radius: 12px;
             font-weight: 950;
             user-select: none;
@@ -101,12 +102,8 @@
         }
 
         .btn.small {
-            padding: 9px 10px;
+            padding: 9px 12px;
             font-size: 13px;
-        }
-
-        .btn.text {
-            line-height: normal;
         }
 
         .btn.primary {
@@ -114,23 +111,32 @@
             background: rgba(255, 214, 110, .14);
         }
 
-        .scoreNeon {
+        /* Mobile-clear scoreboard */
+        .scorebar {
+            pointer-events: none;
+            flex: 1 1 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .scorePill {
             pointer-events: none;
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 10px 14px;
+            padding: 9px 12px;
             border-radius: 999px;
             border: 1px solid rgba(255, 255, 255, .12);
-            background: rgba(18, 26, 36, .52);
+            background: rgba(18, 26, 36, .55);
             backdrop-filter: blur(10px);
-            box-shadow: 0 14px 30px rgba(0, 0, 0, .28);
-            max-width: 72vw;
-            overflow: hidden;
-            white-space: nowrap;
+            box-shadow: 0 14px 30px rgba(0, 0, 0, .22);
+            max-width: 70vw;
         }
 
-        .scoreNeon .mode {
+        .tag {
             font-weight: 980;
             letter-spacing: .6px;
             font-size: 12px;
@@ -140,80 +146,115 @@
             background: rgba(255, 255, 255, .06);
             text-transform: uppercase;
             flex: 0 0 auto;
+            white-space: nowrap;
         }
 
-        .scoreNeon .score {
-            font-weight: 980;
-            letter-spacing: .4px;
-            font-size: 14px;
-            text-transform: uppercase;
+        .scoreNums {
             display: flex;
-            align-items: center;
+            align-items: baseline;
             gap: 10px;
-            flex: 1 1 auto;
-            min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            font-weight: 1000;
+            letter-spacing: .2px;
+            white-space: nowrap;
         }
 
-        .glowText {
+        .scoreNums .side {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.05;
+        }
+
+        .scoreNums .label {
+            font-size: 10px;
+            font-weight: 900;
+            letter-spacing: .7px;
+            color: rgba(233, 240, 255, .78);
+            text-transform: uppercase;
+        }
+
+        .scoreNums .num {
+            font-size: 18px;
+            font-weight: 1000;
             text-shadow:
-                0 0 6px rgba(42, 165, 255, .35),
-                0 0 16px rgba(42, 165, 255, .20),
-                0 0 28px rgba(255, 214, 110, .12);
-            animation: neonPulse 2.2s ease-in-out infinite;
+                0 0 8px rgba(42, 165, 255, .22),
+                0 0 18px rgba(255, 214, 110, .10);
         }
 
-        @keyframes neonPulse {
-
-            0%,
-            100% {
-                filter: brightness(1);
-            }
-
-            50% {
-                filter: brightness(1.15);
-            }
-        }
-
-        .sep {
+        .scoreNums .sep {
             opacity: .55;
+            font-size: 16px;
+            padding: 0 2px;
         }
 
-        /* Overlays */
-        .overlay {
+        /* ===== BOTTOM SHEET MENU ===== */
+        .backdrop {
             position: fixed;
             inset: 0;
             z-index: 20;
+            background: rgba(0, 0, 0, .55);
+            backdrop-filter: blur(5px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .18s ease;
+        }
+
+        .backdrop.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .sheet {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 21;
+            transform: translateY(110%);
+            transition: transform .22s ease;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            pointer-events: none;
+        }
+
+        .sheet.open {
+            transform: translateY(0%);
+            pointer-events: auto;
+        }
+
+        .sheetCard {
+            margin: 0 10px 10px;
+            border-radius: 20px;
+            background: rgba(18, 26, 36, .92);
+            border: 1px solid rgba(255, 255, 255, .12);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .sheetHeader {
+            padding: 12px 14px 10px;
             display: flex;
             align-items: center;
-            justify-content: center;
-            padding: 16px;
-            background: radial-gradient(1000px 700px at 50% 35%, rgba(255, 255, 255, .10), rgba(0, 0, 0, .72));
-            backdrop-filter: blur(6px);
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, .10);
+            background: rgba(255, 255, 255, .04);
         }
 
-        .card {
-            width: min(560px, 96vw);
-            border-radius: var(--radius);
-            background: rgba(18, 26, 36, .82);
-            border: 1px solid rgba(255, 255, 255, .12);
-            padding: 14px;
-            box-shadow: var(--shadow);
+        .sheetTitle {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 1000;
+            letter-spacing: .3px;
         }
 
-        .title {
-            margin: 0 0 6px;
-            font-size: 18px;
-            font-weight: 980;
-            letter-spacing: .2px;
+        .grab {
+            width: 44px;
+            height: 4px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .22);
+            margin: 10px auto 0;
         }
 
-        .sub {
-            margin: 0 0 12px;
-            color: var(--muted);
-            line-height: 1.45;
-            font-size: 13px;
+        .sheetBody {
+            padding: 12px 14px 14px;
         }
 
         .row {
@@ -225,6 +266,10 @@
 
         .row.tight {
             gap: 8px;
+        }
+
+        .spacer {
+            height: 10px;
         }
 
         select,
@@ -246,6 +291,7 @@
             gap: 8px;
             cursor: pointer;
             flex: 1 1 180px;
+            user-select: none;
         }
 
         label.chk input {
@@ -258,6 +304,7 @@
             border-radius: 14px;
             padding: 10px 12px;
             font-weight: 950;
+            flex: 1 1 220px;
         }
 
         .stat small {
@@ -272,23 +319,28 @@
         }
 
         @media (max-width: 420px) {
+            .scorePill {
+                max-width: 76vw;
+                padding: 8px 10px;
+                gap: 8px;
+            }
+
+            .scoreNums .num {
+                font-size: 18px;
+            }
+
+            .tag {
+                font-size: 11px;
+                padding: 5px 9px;
+            }
 
             select,
             label.chk {
                 min-width: 140px;
             }
 
-            .scoreNeon {
-                max-width: 68vw;
+            .btn.small {
                 padding: 9px 12px;
-            }
-
-            .scoreNeon .score {
-                font-size: 13px;
-            }
-
-            .btn {
-                padding: 9px 10px;
             }
         }
     </style>
@@ -300,137 +352,107 @@
     </div>
 
     <!-- Topbar -->
-    <div class="topbar" id="topbar">
-        <div class="leftBtns">
-            <button class="btn small" id="gearBtn" aria-label="Settings">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="2" />
-                    <path
-                        d="M19.4 15a7.96 7.96 0 0 0 .1-1l2-1.2-2-3.5-2.3.6a8.4 8.4 0 0 0-1.7-1l-.3-2.4H9.8l-.3 2.4a8.4 8.4 0 0 0-1.7 1l-2.3-.6-2 3.5 2 1.2a7.96 7.96 0 0 0 .1 1 7.96 7.96 0 0 0-.1 1l-2 1.2 2 3.5 2.3-.6c.5.4 1.1.7 1.7 1l.3 2.4h4.4l.3-2.4c.6-.3 1.2-.6 1.7-1l2.3.6 2-3.5-2-1.2a7.96 7.96 0 0 0-.1-1Z"
-                        stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
-                </svg>
-            </button>
-
-            <button class="btn small text" id="pauseBtn">Pause</button>
-        </div>
-
-        <div class="scoreNeon" id="scoreNeon">
-            <div class="mode glowText" id="modeTag">NORMAL</div>
-            <div class="score glowText">
-                <span>YOU <span id="sYou">0</span></span>
-                <span class="sep">:</span>
-                <span><span id="sAI">0</span> AI</span>
-                <span class="sep">•</span>
-                <span id="personaTag" style="opacity:.86;">DEFENSIVE</span>
+    <div class="topbar">
+        <div class="scorebar">
+            <div class="scorePill" aria-live="polite">
+                <div class="tag" id="modeTag">NORMAL</div>
+                <div class="scoreNums">
+                    <div class="side">
+                        <div class="label">Player</div>
+                        <div class="num" id="sYou">0</div>
+                    </div>
+                    <div class="sep">VS</div>
+                    <div class="side">
+                        <div class="label">AI</div>
+                        <div class="num" id="sAI">0</div>
+                    </div>
+                    <div class="sep">•</div>
+                    <div class="side" style="min-width:86px;">
+                        <div class="label">Style</div>
+                        <div class="num" id="personaTag" style="font-size:12px; font-weight:1000;">DEF</div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div class="rightBtns">
-            <!-- This becomes MENU during gameplay -->
-            <button class="btn small text" id="menuTopBtn">Menu</button>
+            <button class="btn small" id="menuBtn">Menu</button>
         </div>
     </div>
 
-    <!-- Start/Main Menu overlay -->
-    <div class="overlay" id="menuOverlay">
-        <div class="card">
-            <h1 class="title">Air Hockey Pro</h1>
-            <p class="sub">
-                Drag anywhere on the <b>bottom half</b> to move your paddle. Tap the board to serve.
-                Install as a PWA for best Android full-screen feel.
-            </p>
+    <!-- Backdrop + bottom sheet menu -->
+    <div class="backdrop" id="backdrop"></div>
 
-            <div class="row">
-                <button class="btn primary text" id="startBtn" style="flex:1 1 220px;">Start / Resume</button>
-                <button class="btn text" id="installBtn" style="flex:1 1 160px;">Install</button>
+    <div class="sheet" id="sheet">
+        <div class="grab"></div>
+        <div class="sheetCard">
+            <div class="sheetHeader">
+                <h2 class="sheetTitle">Menu</h2>
+                <button class="btn small" id="closeSheetBtn">Close</button>
             </div>
 
-            <div class="row" style="margin-top:10px;">
-                <button class="btn text" id="resetMatchBtn" style="flex:1 1 220px;">Reset Match</button>
-                <button class="btn text" id="closeMenuBtn" style="flex:1 1 160px;">Close</button>
-            </div>
-
-            <div class="stat" style="margin-top:10px;">
-                <small>Tip</small>
-                For best Android fit: install the app and launch from home screen.
-            </div>
-        </div>
-    </div>
-
-    <!-- Pause overlay -->
-    <div class="overlay hide" id="pauseOverlay">
-        <div class="card">
-            <h2 class="title" style="margin-bottom:6px;">Paused</h2>
-            <p class="sub" style="margin-bottom:12px;">Resume when you’re ready.</p>
-            <div class="row">
-                <button class="btn primary text" id="resumeBtn" style="flex:1 1 200px;">Resume</button>
-                <button class="btn text" id="openMenuBtn" style="flex:1 1 200px;">Menu</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Settings modal -->
-    <div class="overlay hide" id="settingsOverlay">
-        <div class="card">
-            <h2 class="title" style="margin-bottom:6px;">Settings</h2>
-            <p class="sub">Difficulty, AI personality, sound and haptics.</p>
-
-            <div class="row">
-                <select id="diffSel">
-                    <option value="easy">Easy</option>
-                    <option value="normal" selected>Normal</option>
-                    <option value="smart">Smart</option>
-                    <option value="hard">Hard</option>
-                    <option value="pro">Pro</option>
-                    <option value="legendary">Legendary (Learns you)</option>
-                </select>
-
-                <select id="personaSel">
-                    <option value="defensive" selected>AI: Defensive</option>
-                    <option value="aggressive">AI: Aggressive</option>
-                    <option value="trickshot">AI: Trickshot</option>
-                </select>
-            </div>
-
-            <div class="row tight">
-                <label class="chk">
-                    <input type="checkbox" id="soundToggle" checked />
-                    Sound
-                </label>
-
-                <label class="chk">
-                    <input type="checkbox" id="hapticsToggle" checked />
-                    Haptics (Android)
-                </label>
-            </div>
-
-            <div class="row">
-                <div class="stat" style="flex: 1 1 240px;">
-                    <small>Legendary profile</small>
-                    <div id="profileLine">Collecting data…</div>
+            <div class="sheetBody">
+                <div class="row">
+                    <button class="btn primary" id="startResumeBtn" style="flex:1 1 220px;">Start / Resume</button>
+                    <button class="btn" id="resetMatchBtn" style="flex:1 1 180px;">Reset Match</button>
                 </div>
-                <div class="stat" style="flex: 1 1 240px;">
-                    <small>Target</small>
-                    <div>First to <span id="targetLabel">7</span></div>
-                </div>
-            </div>
 
-            <div class="row" style="margin-top:12px;">
-                <button class="btn text" id="resetLearningBtn" style="flex:1 1 220px;">Reset AI Learning</button>
-                <button class="btn primary text" id="closeSettingsBtn" style="flex:1 1 160px;">Close</button>
+                <div class="spacer"></div>
+
+                <div class="row">
+                    <select id="diffSel">
+                        <option value="easy">Easy</option>
+                        <option value="normal" selected>Normal</option>
+                        <option value="smart">Smart</option>
+                        <option value="hard">Hard</option>
+                        <option value="pro">Pro</option>
+                        <option value="legendary">Legendary (Learns you)</option>
+                    </select>
+
+                    <select id="personaSel">
+                        <option value="defensive" selected>AI: Defensive</option>
+                        <option value="aggressive">AI: Aggressive</option>
+                        <option value="trickshot">AI: Trickshot</option>
+                    </select>
+                </div>
+
+                <div class="spacer"></div>
+
+                <div class="row tight">
+                    <label class="chk">
+                        <input type="checkbox" id="soundToggle" checked />
+                        Sound
+                    </label>
+                    <label class="chk">
+                        <input type="checkbox" id="hapticsToggle" checked />
+                        Haptics (Android)
+                    </label>
+                </div>
+
+                <div class="spacer"></div>
+
+                <div class="row">
+                    <div class="stat">
+                        <small>Legendary profile</small>
+                        <div id="profileLine">Collecting data…</div>
+                    </div>
+                    <div class="stat">
+                        <small>Target</small>
+                        <div>First to <span id="targetLabel">7</span></div>
+                    </div>
+                </div>
+
+                <div class="spacer"></div>
+
+                <div class="row">
+                    <button class="btn" id="resetLearningBtn" style="flex:1 1 220px;">Reset AI Learning</button>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
         (() => {
-            // -------- PWA install prompt --------
-            let deferredPrompt = null;
-            window.addEventListener("beforeinstallprompt", (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-            });
-
             // SW
             if ("serviceWorker" in navigator) {
                 window.addEventListener("load", async () => {
@@ -438,44 +460,36 @@
                 });
             }
 
-            // -------- DOM --------
+            // Canvas
             const canvas = document.getElementById("c");
             const ctx = canvas.getContext("2d", { alpha: false });
 
+            // UI
             const ui = {
                 sYou: document.getElementById("sYou"),
                 sAI: document.getElementById("sAI"),
                 modeTag: document.getElementById("modeTag"),
                 personaTag: document.getElementById("personaTag"),
 
-                menuOverlay: document.getElementById("menuOverlay"),
-                startBtn: document.getElementById("startBtn"),
-                closeMenuBtn: document.getElementById("closeMenuBtn"),
+                menuBtn: document.getElementById("menuBtn"),
+                backdrop: document.getElementById("backdrop"),
+                sheet: document.getElementById("sheet"),
+                closeSheetBtn: document.getElementById("closeSheetBtn"),
+
+                startResumeBtn: document.getElementById("startResumeBtn"),
                 resetMatchBtn: document.getElementById("resetMatchBtn"),
-
-                pauseBtn: document.getElementById("pauseBtn"),
-                menuTopBtn: document.getElementById("menuTopBtn"),
-
-                pauseOverlay: document.getElementById("pauseOverlay"),
-                resumeBtn: document.getElementById("resumeBtn"),
-                openMenuBtn: document.getElementById("openMenuBtn"),
-
-                settingsOverlay: document.getElementById("settingsOverlay"),
-                gearBtn: document.getElementById("gearBtn"),
-                closeSettingsBtn: document.getElementById("closeSettingsBtn"),
 
                 diffSel: document.getElementById("diffSel"),
                 personaSel: document.getElementById("personaSel"),
                 soundToggle: document.getElementById("soundToggle"),
                 hapticsToggle: document.getElementById("hapticsToggle"),
                 resetLearningBtn: document.getElementById("resetLearningBtn"),
+
                 profileLine: document.getElementById("profileLine"),
                 targetLabel: document.getElementById("targetLabel"),
-
-                installBtn: document.getElementById("installBtn"),
             };
 
-            // -------- Resize (Android fit) --------
+            // Resize
             function resize() {
                 const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
                 canvas.width = Math.floor(innerWidth * dpr);
@@ -484,17 +498,18 @@
             }
             addEventListener("resize", resize, { passive: true });
             resize();
+
             const dims = () => ({ w: innerWidth, h: innerHeight });
             const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-            // -------- Haptics --------
+            // Haptics
             function vibrate(pattern) {
                 if (!ui.hapticsToggle.checked) return;
                 if (!("vibrate" in navigator)) return;
                 try { navigator.vibrate(pattern); } catch { }
             }
 
-            // -------- Audio (generated) --------
+            // Audio (generated)
             let audioCtx = null;
             function ensureAudio() {
                 if (!ui.soundToggle.checked) return;
@@ -533,15 +548,7 @@
             };
             window.addEventListener("pointerdown", ensureAudio, { passive: true });
 
-            // -------- Install --------
-            ui.installBtn.addEventListener("click", async () => {
-                if (!deferredPrompt) return;
-                deferredPrompt.prompt();
-                try { await deferredPrompt.userChoice; } catch { }
-                deferredPrompt = null;
-            });
-
-            // -------- Game constants --------
+            // Game constants
             const GAME = { targetScore: 7, fixedDt: 1 / 120, maxFrame: 1 / 30 };
             const table = { wall: 10, pad: 22, goalWidthFrac: 0.34 };
             ui.targetLabel.textContent = String(GAME.targetScore);
@@ -564,8 +571,8 @@
                 }
             }
 
-            // -------- Learning profile --------
-            const PROFILE_KEY = "ah_profile_v3";
+            // Learning profile
+            const PROFILE_KEY = "ah_profile_v4";
             function makeFreshProfile() { return { samples: 0, emaShotDir: 0, lastUpdate: Date.now() }; }
             function loadProfile() { try { const r = localStorage.getItem(PROFILE_KEY); return r ? JSON.parse(r) : null; } catch { return null; } }
             function saveProfile(p) { try { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch { } }
@@ -576,17 +583,17 @@
                     ui.profileLine.textContent = "Collecting data…";
                     return;
                 }
-                const bias = profile.emaShotDir < -0.15 ? "Left" : (profile.emaShotDir > 0.15 ? "Right" : "Balanced");
-                ui.profileLine.textContent = `${profile.samples} hits • bias: ${bias}`;
+                const bias = profile.emaShotDir < -0.15 ? "Left bias" : (profile.emaShotDir > 0.15 ? "Right bias" : "Balanced");
+                ui.profileLine.textContent = `${profile.samples} hits • ${bias}`;
             }
             updateProfileUI();
 
-            // -------- State --------
+            // State
             const state = {
                 running: false,
                 paused: true,
                 gameOver: false,
-                message: "",
+                message: "Open Menu to start",
                 scoreYou: 0,
                 scoreAI: 0,
                 diff: ui.diffSel.value,
@@ -600,13 +607,19 @@
                 lastPuckV: { vx: 0, vy: 0 },
             };
 
+            function shortPersonaTag(p) {
+                if (p === "defensive") return "DEF";
+                if (p === "aggressive") return "AGG";
+                return "TRICK";
+            }
+
             function applyModeTags() {
                 ui.modeTag.textContent = state.diff.toUpperCase();
-                ui.personaTag.textContent = state.persona.toUpperCase();
+                ui.personaTag.textContent = shortPersonaTag(state.persona);
             }
             applyModeTags();
 
-            // -------- Difficulty + personality --------
+            // Difficulty + personality
             function baseParamsByDifficulty(d) {
                 switch (d) {
                     case "easy": return { speed: 1020, pressure: 0.30, predict: 0.40, shotPower: 0.65, adapt: 0.08, learn: 0.00 };
@@ -648,12 +661,11 @@
                 };
             }
 
-            // -------- Player controls: drag on bottom half --------
+            // Player controls: drag on bottom half
             function setTargetFromEvent(e) {
                 state.youTarget.x = e.clientX;
                 state.youTarget.y = e.clientY;
             }
-
             canvas.addEventListener("pointerdown", (e) => {
                 state.pointerDown = true;
                 setTargetFromEvent(e);
@@ -669,14 +681,48 @@
             canvas.addEventListener("pointerup", () => state.pointerDown = false, { passive: true });
             canvas.addEventListener("pointercancel", () => state.pointerDown = false, { passive: true });
 
-            // -------- UI actions --------
-            ui.gearBtn.addEventListener("click", () => {
-                ui.settingsOverlay.classList.remove("hide");
-                ui.diffSel.value = state.diff;
-                ui.personaSel.value = state.persona;
-                updateProfileUI();
+            // Bottom sheet controls
+            function openSheet() {
+                state.paused = true;
+                ui.backdrop.classList.add("open");
+                ui.sheet.classList.add("open");
+            }
+            function closeSheet() {
+                ui.backdrop.classList.remove("open");
+                ui.sheet.classList.remove("open");
+            }
+
+            ui.menuBtn.addEventListener("click", openSheet);
+            ui.closeSheetBtn.addEventListener("click", closeSheet);
+            ui.backdrop.addEventListener("click", closeSheet);
+
+            // Menu actions
+            ui.startResumeBtn.addEventListener("click", () => {
+                // Start new if not running, otherwise resume (still needs serve if puck reset)
+                if (!state.running) {
+                    state.running = true;
+                    state.paused = true;
+                    state.gameOver = false;
+                    resetPositions();
+                    state.message = "Tap to serve";
+                } else {
+                    // Resume (if paused mid round, resume; if between serves, keep paused until serve)
+                    if (!state.gameOver) state.paused = true;
+                    if (!state.message) state.message = "Tap to serve";
+                }
+                closeSheet();
             });
-            ui.closeSettingsBtn.addEventListener("click", () => ui.settingsOverlay.classList.add("hide"));
+
+            ui.resetMatchBtn.addEventListener("click", () => {
+                state.scoreYou = 0; state.scoreAI = 0;
+                ui.sYou.textContent = "0"; ui.sAI.textContent = "0";
+                state.running = true;
+                state.paused = true;
+                state.gameOver = false;
+                resetPositions();
+                state.message = "Tap to serve";
+                closeSheet();
+            });
 
             ui.diffSel.addEventListener("change", () => { state.diff = ui.diffSel.value; applyModeTags(); });
             ui.personaSel.addEventListener("change", () => { state.persona = ui.personaSel.value; applyModeTags(); });
@@ -687,66 +733,7 @@
                 updateProfileUI();
             });
 
-            ui.startBtn.addEventListener("click", () => {
-                state.running = true;
-                state.paused = true;
-                state.gameOver = false;
-                ui.menuOverlay.classList.add("hide");
-                resetPositions();
-                state.message = "Tap to serve";
-            });
-
-            ui.closeMenuBtn.addEventListener("click", () => {
-                ui.menuOverlay.classList.add("hide");
-                if (state.running && !state.gameOver) {
-                    // remain paused until serve
-                    state.paused = true;
-                    state.message = "Tap to serve";
-                }
-            });
-
-            ui.resetMatchBtn.addEventListener("click", () => {
-                state.scoreYou = 0; state.scoreAI = 0;
-                ui.sYou.textContent = "0"; ui.sAI.textContent = "0";
-                state.gameOver = false;
-                state.running = true;
-                state.paused = true;
-                resetPositions();
-                state.message = "Tap to serve";
-                ui.menuOverlay.classList.add("hide");
-            });
-
-            ui.pauseBtn.addEventListener("click", () => {
-                if (!state.running || state.gameOver) return;
-                togglePause();
-            });
-
-            ui.resumeBtn.addEventListener("click", () => togglePause(false));
-            ui.openMenuBtn.addEventListener("click", () => openMenu());
-
-            // Top-right MENU button (replaces reset during gameplay)
-            ui.menuTopBtn.addEventListener("click", () => openMenu());
-
-            function openMenu() {
-                state.paused = true;
-                state.message = "Paused";
-                ui.pauseOverlay.classList.add("hide");
-                ui.menuOverlay.classList.remove("hide");
-            }
-
-            function togglePause(force) {
-                const next = (typeof force === "boolean") ? force : !state.paused;
-                state.paused = next;
-                if (state.paused) {
-                    ui.pauseOverlay.classList.remove("hide");
-                    state.message = "Paused";
-                } else {
-                    ui.pauseOverlay.classList.add("hide");
-                    state.message = "";
-                }
-            }
-
-            // -------- Core helpers --------
+            // Core helpers
             function resetPositions() {
                 const { w, h } = dims();
                 puck.x = w / 2; puck.y = h / 2; puck.vx = 0; puck.vy = 0; puck.glow = 0;
@@ -870,7 +857,6 @@
 
                 let tx = clamp(target.x, table.pad, w - table.pad);
                 let ty = target.y;
-
                 if (half === "bottom") ty = clamp(ty, mid + table.pad, h - table.pad);
                 else ty = clamp(ty, table.pad, mid - table.pad);
 
@@ -890,7 +876,7 @@
                 }
             }
 
-            // -------- AI prediction & shots --------
+            // AI prediction & shots
             function predictPuckXAtY(targetY) {
                 const { w } = dims();
                 const left = table.wall + puck.r;
@@ -1001,7 +987,7 @@
                 updateProfileUI();
             }
 
-            // -------- Update loop --------
+            // Update loop
             function step(dt) {
                 const { w, h } = dims();
                 const mid = h / 2;
@@ -1068,7 +1054,7 @@
                 }
             }
 
-            // -------- Drawing (neon board) --------
+            // Drawing (neon board)
             function draw() {
                 const { w, h } = dims();
                 const mid = h / 2;
@@ -1140,9 +1126,9 @@
                 ctx.fillRect(0, 0, 14, h);
 
                 const gr = ctx.createLinearGradient(0, 0, 0, h);
-                gr.addColorStop(0, "rgba(255,75,110,.22)");
-                gr.addColorStop(0.5, "rgba(255,75,110,.08)");
-                gr.addColorStop(1, "rgba(255,75,110,.22)");
+                gr.addColorStop(0, "rgba(255,214,110,.20)");
+                gr.addColorStop(0.5, "rgba(255,214,110,.08)");
+                gr.addColorStop(1, "rgba(255,214,110,.20)");
                 ctx.fillStyle = gr;
                 ctx.fillRect(w - 14, 0, 14, h);
             }
@@ -1201,7 +1187,7 @@
                 ctx.restore();
             }
 
-            // -------- Main loop --------
+            // Main loop
             function loop(now) {
                 const frameDt = Math.min(GAME.maxFrame, (now - state.last) / 1000);
                 state.last = now;
@@ -1216,11 +1202,10 @@
                 requestAnimationFrame(loop);
             }
 
-            // -------- Init --------
+            // Init
             resetPositions();
-            ui.menuOverlay.classList.remove("hide"); // open menu first
+            openSheet(); // show menu at start
             requestAnimationFrame(loop);
-
         })();
     </script>
 </body>
