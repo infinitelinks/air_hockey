@@ -21,6 +21,10 @@
             --blue: #2aa5ff;
             --shadow: 0 18px 60px rgba(0, 0, 0, .45);
             --radius: 16px;
+
+            /* "Board diameter" – smallest viewport dimension */
+            --board: min(100vw, 100vh);
+            --uiMax: min(calc(var(--board) - 20px), 560px);
         }
 
         html,
@@ -43,6 +47,10 @@
             .vh {
                 height: 100dvh;
             }
+
+            :root {
+                --board: min(100vw, 100dvh);
+            }
         }
 
         #wrap {
@@ -58,12 +66,13 @@
             touch-action: none;
         }
 
-        /* ===== TOP BAR ===== */
+        /* ===== TOP BAR (constrained inside board diameter) ===== */
         .topbar {
             position: fixed;
             top: env(safe-area-inset-top, 0px);
-            left: 0;
-            right: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: var(--uiMax);
             padding: 10px 10px 8px;
             display: flex;
             align-items: center;
@@ -71,6 +80,7 @@
             z-index: 10;
             pointer-events: none;
             gap: 10px;
+            box-sizing: border-box;
         }
 
         .rightBtns {
@@ -117,8 +127,7 @@
             flex: 1 1 auto;
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 10px;
+            justify-content: flex-start;
             min-width: 0;
         }
 
@@ -133,7 +142,8 @@
             background: rgba(18, 26, 36, .55);
             backdrop-filter: blur(10px);
             box-shadow: 0 14px 30px rgba(0, 0, 0, .22);
-            max-width: 70vw;
+            max-width: 100%;
+            overflow: hidden;
         }
 
         .tag {
@@ -156,6 +166,7 @@
             font-weight: 1000;
             letter-spacing: .2px;
             white-space: nowrap;
+            min-width: 0;
         }
 
         .scoreNums .side {
@@ -186,7 +197,7 @@
             padding: 0 2px;
         }
 
-        /* ===== BOTTOM SHEET MENU ===== */
+        /* ===== BOTTOM SHEET MENU (constrained inside board diameter) ===== */
         .backdrop {
             position: fixed;
             inset: 0;
@@ -205,18 +216,19 @@
 
         .sheet {
             position: fixed;
-            left: 0;
-            right: 0;
+            left: 50%;
+            transform: translateX(-50%) translateY(110%);
             bottom: 0;
             z-index: 21;
-            transform: translateY(110%);
-            transition: transform .22s ease;
+            width: var(--uiMax);
             padding-bottom: env(safe-area-inset-bottom, 0px);
             pointer-events: none;
+            transition: transform .22s ease;
+            box-sizing: border-box;
         }
 
         .sheet.open {
-            transform: translateY(0%);
+            transform: translateX(-50%) translateY(0%);
             pointer-events: auto;
         }
 
@@ -227,15 +239,33 @@
             border: 1px solid rgba(255, 255, 255, .12);
             box-shadow: var(--shadow);
             overflow: hidden;
+            user-select: none;
+            touch-action: none;
+        }
+
+        .grabWrap {
+            padding: 10px 14px 10px;
+            background: rgba(255, 255, 255, .04);
+            border-bottom: 1px solid rgba(255, 255, 255, .10);
+            cursor: grab;
+            touch-action: none;
+        }
+
+        .grabBar {
+            width: 44px;
+            height: 4px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .22);
+            margin: 0 auto;
         }
 
         .sheetHeader {
-            padding: 12px 14px 10px;
+            padding: 10px 14px 10px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 1px solid rgba(255, 255, 255, .10);
-            background: rgba(255, 255, 255, .04);
+            gap: 10px;
+            background: rgba(255, 255, 255, .02);
         }
 
         .sheetTitle {
@@ -243,14 +273,6 @@
             font-size: 14px;
             font-weight: 1000;
             letter-spacing: .3px;
-        }
-
-        .grab {
-            width: 44px;
-            height: 4px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, .22);
-            margin: 10px auto 0;
         }
 
         .sheetBody {
@@ -320,7 +342,6 @@
 
         @media (max-width: 420px) {
             .scorePill {
-                max-width: 76vw;
                 padding: 8px 10px;
                 gap: 8px;
             }
@@ -341,6 +362,10 @@
 
             .btn.small {
                 padding: 9px 12px;
+            }
+
+            .sheetCard {
+                margin: 0 6px 8px;
             }
         }
     </style>
@@ -384,8 +409,12 @@
     <div class="backdrop" id="backdrop"></div>
 
     <div class="sheet" id="sheet">
-        <div class="grab"></div>
-        <div class="sheetCard">
+        <div class="sheetCard" id="sheetCard">
+            <!-- swipe area -->
+            <div class="grabWrap" id="grabWrap" aria-label="Drag down to close">
+                <div class="grabBar"></div>
+            </div>
+
             <div class="sheetHeader">
                 <h2 class="sheetTitle">Menu</h2>
                 <button class="btn small" id="closeSheetBtn">Close</button>
@@ -460,11 +489,9 @@
                 });
             }
 
-            // Canvas
             const canvas = document.getElementById("c");
             const ctx = canvas.getContext("2d", { alpha: false });
 
-            // UI
             const ui = {
                 sYou: document.getElementById("sYou"),
                 sAI: document.getElementById("sAI"),
@@ -474,6 +501,8 @@
                 menuBtn: document.getElementById("menuBtn"),
                 backdrop: document.getElementById("backdrop"),
                 sheet: document.getElementById("sheet"),
+                sheetCard: document.getElementById("sheetCard"),
+                grabWrap: document.getElementById("grabWrap"),
                 closeSheetBtn: document.getElementById("closeSheetBtn"),
 
                 startResumeBtn: document.getElementById("startResumeBtn"),
@@ -489,7 +518,6 @@
                 targetLabel: document.getElementById("targetLabel"),
             };
 
-            // Resize
             function resize() {
                 const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
                 canvas.width = Math.floor(innerWidth * dpr);
@@ -572,7 +600,7 @@
             }
 
             // Learning profile
-            const PROFILE_KEY = "ah_profile_v4";
+            const PROFILE_KEY = "ah_profile_v5";
             function makeFreshProfile() { return { samples: 0, emaShotDir: 0, lastUpdate: Date.now() }; }
             function loadProfile() { try { const r = localStorage.getItem(PROFILE_KEY); return r ? JSON.parse(r) : null; } catch { return null; } }
             function saveProfile(p) { try { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch { } }
@@ -593,7 +621,7 @@
                 running: false,
                 paused: true,
                 gameOver: false,
-                message: "Open Menu to start",
+
                 scoreYou: 0,
                 scoreAI: 0,
                 diff: ui.diffSel.value,
@@ -605,6 +633,9 @@
                 pointerDown: false,
                 youTarget: { x: 0, y: 0 },
                 lastPuckV: { vx: 0, vy: 0 },
+
+                toastText: "",
+                toastT: 0,
             };
 
             function shortPersonaTag(p) {
@@ -618,6 +649,11 @@
                 ui.personaTag.textContent = shortPersonaTag(state.persona);
             }
             applyModeTags();
+
+            function showToast(text, seconds = 1.2) {
+                state.toastText = text;
+                state.toastT = seconds;
+            }
 
             // Difficulty + personality
             function baseParamsByDifficulty(d) {
@@ -669,8 +705,9 @@
             canvas.addEventListener("pointerdown", (e) => {
                 state.pointerDown = true;
                 setTargetFromEvent(e);
-                // tap to serve
-                if (state.running && state.paused && !state.gameOver) serve();
+
+                // tap to serve (only if sheet is closed)
+                if (state.running && state.paused && !state.gameOver && !ui.sheet.classList.contains("open")) serve();
             }, { passive: true });
 
             canvas.addEventListener("pointermove", (e) => {
@@ -682,33 +719,79 @@
             canvas.addEventListener("pointercancel", () => state.pointerDown = false, { passive: true });
 
             // Bottom sheet controls
+            let sheetDrag = { active: false, id: null, startY: 0, dy: 0 };
             function openSheet() {
                 state.paused = true;
                 ui.backdrop.classList.add("open");
                 ui.sheet.classList.add("open");
+                ui.sheet.style.transform = "translateX(-50%) translateY(0%)";
             }
             function closeSheet() {
                 ui.backdrop.classList.remove("open");
                 ui.sheet.classList.remove("open");
+                ui.sheet.style.transform = "";
+                sheetDrag.active = false;
+                sheetDrag.id = null;
+                sheetDrag.dy = 0;
             }
 
             ui.menuBtn.addEventListener("click", openSheet);
             ui.closeSheetBtn.addEventListener("click", closeSheet);
             ui.backdrop.addEventListener("click", closeSheet);
 
+            // Swipe down on grab area to close
+            ui.grabWrap.addEventListener("pointerdown", (e) => {
+                e.preventDefault();
+                ui.grabWrap.setPointerCapture(e.pointerId);
+                sheetDrag.active = true;
+                sheetDrag.id = e.pointerId;
+                sheetDrag.startY = e.clientY;
+                sheetDrag.dy = 0;
+            }, { passive: false });
+
+            ui.grabWrap.addEventListener("pointermove", (e) => {
+                if (!sheetDrag.active || e.pointerId !== sheetDrag.id) return;
+                const dy = Math.max(0, e.clientY - sheetDrag.startY);
+                sheetDrag.dy = dy;
+
+                // translate the sheet down by pixels for native feel
+                ui.sheet.style.transition = "none";
+                ui.sheet.style.transform = `translateX(-50%) translateY(${dy}px)`;
+            }, { passive: true });
+
+            function endSheetDrag() {
+                if (!sheetDrag.active) return;
+                ui.sheet.style.transition = ""; // restore CSS transition
+
+                // threshold to close
+                if (sheetDrag.dy > 90) {
+                    closeSheet();
+                } else {
+                    // snap back open
+                    ui.sheet.style.transform = "translateX(-50%) translateY(0%)";
+                    // keep open
+                    ui.sheet.classList.add("open");
+                    ui.backdrop.classList.add("open");
+                }
+                sheetDrag.active = false;
+                sheetDrag.id = null;
+                sheetDrag.dy = 0;
+            }
+
+            ui.grabWrap.addEventListener("pointerup", endSheetDrag, { passive: true });
+            ui.grabWrap.addEventListener("pointercancel", endSheetDrag, { passive: true });
+
             // Menu actions
             ui.startResumeBtn.addEventListener("click", () => {
-                // Start new if not running, otherwise resume (still needs serve if puck reset)
                 if (!state.running) {
                     state.running = true;
                     state.paused = true;
                     state.gameOver = false;
                     resetPositions();
-                    state.message = "Tap to serve";
+                    showToast("Tap to serve", 1.0);
                 } else {
-                    // Resume (if paused mid round, resume; if between serves, keep paused until serve)
-                    if (!state.gameOver) state.paused = true;
-                    if (!state.message) state.message = "Tap to serve";
+                    if (!state.gameOver) state.paused = true; // still waiting for serve if needed
+                    showToast("Tap to serve", 1.0);
                 }
                 closeSheet();
             });
@@ -720,7 +803,7 @@
                 state.paused = true;
                 state.gameOver = false;
                 resetPositions();
-                state.message = "Tap to serve";
+                showToast("Tap to serve", 1.0);
                 closeSheet();
             });
 
@@ -753,7 +836,7 @@
                 puck.vx = Math.sin(ang) * speed;
                 puck.vy = dir * Math.cos(ang) * speed;
                 state.paused = false;
-                state.message = "";
+                state.toastT = 0;
             }
 
             function collideDiscSafe(pad) {
@@ -839,7 +922,7 @@
                 if (state.scoreYou >= GAME.targetScore || state.scoreAI >= GAME.targetScore) {
                     state.paused = true;
                     state.gameOver = true;
-                    state.message = (state.scoreYou > state.scoreAI) ? "You win! Open Menu" : "AI wins! Open Menu";
+                    showToast(state.scoreYou > state.scoreAI ? "You win — open Menu" : "AI wins — open Menu", 2.0);
                     sfx.win();
                     vibrate([30, 40, 30, 40, 30]);
                     puck.vx = puck.vy = 0;
@@ -848,7 +931,7 @@
 
                 resetPositions();
                 state.paused = true;
-                state.message = (who === "you") ? "Goal! Tap to serve" : "AI scored. Tap to serve";
+                showToast(who === "you" ? "Goal! Tap to serve" : "AI scored — tap to serve", 1.4);
             }
 
             function movePad(pad, target, dt, speed, half) {
@@ -876,7 +959,7 @@
                 }
             }
 
-            // AI prediction & shots
+            // AI
             function predictPuckXAtY(targetY) {
                 const { w } = dims();
                 const left = table.wall + puck.r;
@@ -970,7 +1053,6 @@
                 return { x: clamp(tx, table.pad, w - table.pad), y: clamp(ty, table.pad, midY - table.pad) };
             }
 
-            // Learning update when YOU hit
             function updateLearningOnHit() {
                 const base = baseParamsByDifficulty(state.diff);
                 const learnRate = base.learn;
@@ -987,10 +1069,12 @@
                 updateProfileUI();
             }
 
-            // Update loop
             function step(dt) {
                 const { w, h } = dims();
                 const mid = h / 2;
+
+                // decrement toast timer
+                if (state.toastT > 0) state.toastT = Math.max(0, state.toastT - dt);
 
                 // Player moves via drag target (bottom half)
                 const tx = clamp(state.youTarget.x || you.x, table.pad, w - table.pad);
@@ -1021,22 +1105,18 @@
                 state.lastPuckV.vx = puck.vx;
                 state.lastPuckV.vy = puck.vy;
 
-                // puck integrate
                 puck.x += puck.vx * dt;
                 puck.y += puck.vy * dt;
 
-                // friction
                 const fr = Math.exp(-0.66 * dt);
                 puck.vx *= fr; puck.vy *= fr;
 
-                // clamp speed
                 const sp = Math.hypot(puck.vx, puck.vy);
                 if (sp > puck.max) {
                     const k = puck.max / sp;
                     puck.vx *= k; puck.vy *= k;
                 }
 
-                // collisions
                 const hitYou = collideDiscSafe(you);
                 if (hitYou) {
                     const dv = Math.hypot(puck.vx - state.lastPuckV.vx, puck.vy - state.lastPuckV.vy);
@@ -1044,17 +1124,14 @@
                 }
                 collideDiscSafe(ai);
 
-                // walls/goals
                 puckWallsGoals();
 
-                // prevent dead puck
                 if (Math.hypot(puck.vx, puck.vy) < 18) {
                     puck.vx += (Math.random() * 2 - 1) * 10;
                     puck.vy += (Math.random() * 2 - 1) * 10;
                 }
             }
 
-            // Drawing (neon board)
             function draw() {
                 const { w, h } = dims();
                 const mid = h / 2;
@@ -1104,17 +1181,97 @@
 
                 drawPuck();
 
-                if (state.running && state.message) {
-                    ctx.save();
-                    ctx.fillStyle = "rgba(0,0,0,.55)";
-                    ctx.fillRect(0, mid - 36, w, 72);
-                    ctx.fillStyle = "#e9f0ff";
-                    ctx.font = "980 18px system-ui,-apple-system,Segoe UI,Roboto,sans-serif";
-                    ctx.textAlign = "center";
-                    ctx.textBaseline = "middle";
-                    ctx.fillText(state.message, w / 2, mid);
-                    ctx.restore();
+                // Small “Tap to Serve” indicator near player paddle (instead of center text)
+                if (state.running && state.paused && !state.gameOver && !ui.sheet.classList.contains("open")) {
+                    drawServeHint();
                 }
+
+                // Toasts near player paddle (goals / win text stays near paddle too)
+                if (state.toastT > 0 && state.toastText) {
+                    drawToastNearPaddle(state.toastText, state.toastT);
+                }
+            }
+
+            function drawServeHint() {
+                const { w, h } = dims();
+                const text = "Tap to serve";
+                const px = clamp(you.x, 70, w - 70);
+                const py = clamp(you.y - you.r - 34, 18, h - 18);
+
+                ctx.save();
+                ctx.font = "900 13px system-ui,-apple-system,Segoe UI,Roboto,sans-serif";
+                const padX = 12, padY = 8;
+                const tw = ctx.measureText(text).width;
+                const bw = tw + padX * 2;
+                const bh = 28;
+
+                const x = px - bw / 2;
+                const y = py - bh / 2;
+
+                // bubble
+                ctx.globalAlpha = 0.92;
+                roundRect(ctx, x, y, bw, bh, 999);
+                ctx.fillStyle = "rgba(18,26,36,.84)";
+                ctx.fill();
+                ctx.strokeStyle = "rgba(255,255,255,.12)";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // tiny glow line
+                ctx.globalAlpha = 0.45;
+                ctx.strokeStyle = "rgba(255,214,110,.25)";
+                ctx.lineWidth = 2;
+                roundRect(ctx, x + 2, y + 2, bw - 4, bh - 4, 999);
+                ctx.stroke();
+
+                // text
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = "rgba(233,240,255,.92)";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(text, px, y + bh / 2);
+                ctx.restore();
+            }
+
+            function drawToastNearPaddle(text, tLeft) {
+                const { w, h } = dims();
+                const a = clamp(tLeft / 0.35, 0, 1);
+                const px = clamp(you.x, 90, w - 90);
+                const py = clamp(you.y - you.r - 62, 26, h - 26);
+
+                ctx.save();
+                ctx.globalAlpha = 0.88 * a;
+                ctx.font = "950 13px system-ui,-apple-system,Segoe UI,Roboto,sans-serif";
+                const padX = 12, padY = 8;
+                const tw = ctx.measureText(text).width;
+                const bw = tw + padX * 2;
+                const bh = 30;
+                const x = px - bw / 2;
+                const y = py - bh / 2;
+
+                roundRect(ctx, x, y, bw, bh, 12);
+                ctx.fillStyle = "rgba(0,0,0,.42)";
+                ctx.fill();
+                ctx.strokeStyle = "rgba(255,255,255,.14)";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                ctx.fillStyle = "rgba(233,240,255,.95)";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(text, px, y + bh / 2);
+                ctx.restore();
+            }
+
+            function roundRect(ctx, x, y, w, h, r) {
+                const rr = Math.min(r, w / 2, h / 2);
+                ctx.beginPath();
+                ctx.moveTo(x + rr, y);
+                ctx.arcTo(x + w, y, x + w, y + h, rr);
+                ctx.arcTo(x + w, y + h, x, y + h, rr);
+                ctx.arcTo(x, y + h, x, y, rr);
+                ctx.arcTo(x, y, x + w, y, rr);
+                ctx.closePath();
             }
 
             function drawRailGlow(w, h) {
@@ -1187,7 +1344,6 @@
                 ctx.restore();
             }
 
-            // Main loop
             function loop(now) {
                 const frameDt = Math.min(GAME.maxFrame, (now - state.last) / 1000);
                 state.last = now;
