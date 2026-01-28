@@ -9,13 +9,16 @@
     <title>Air Hockey Pro (PWA)</title>
     <style>
         :root {
-            --bg: #0b0f14;
+            --bg: #070b12;
             --panel: rgba(18, 26, 36, .78);
+            --panel2: rgba(18, 26, 36, .60);
             --line: rgba(255, 255, 255, .12);
             --text: #e9f0ff;
             --muted: #a9b6cc;
             --gold: #ffd66e;
-            --ice: #e9f0ff;
+            --ice: #cfe6ff;
+            --red: #ff4b6e;
+            --blue: #2aa5ff;
             --shadow: 0 18px 60px rgba(0, 0, 0, .45);
         }
 
@@ -37,7 +40,7 @@
             background: var(--bg)
         }
 
-        /* Top HUD (auto-hides in gameplay if desired) */
+        /* HUD */
         .hud {
             position: fixed;
             top: env(safe-area-inset-top, 0px);
@@ -49,31 +52,49 @@
             justify-content: space-between;
             gap: 10px;
             z-index: 5;
+            pointer-events: none;
+        }
+
+        .hud .right {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            pointer-events: auto;
         }
 
         .pill {
+            pointer-events: auto;
             background: var(--panel);
             border: 1px solid var(--line);
             border-radius: 999px;
             padding: 8px 10px;
-            font-weight: 850;
+            font-weight: 900;
             letter-spacing: .2px;
             backdrop-filter: blur(10px);
             box-shadow: 0 10px 24px rgba(0, 0, 0, .20);
             user-select: none;
             white-space: nowrap;
-        }
-
-        .pill span {
-            color: var(--muted);
-            font-weight: 750;
-            margin: 0 6px
-        }
-
-        .right {
             display: flex;
-            gap: 8px;
-            align-items: center
+            align-items: center;
+            gap: 10px;
+            max-width: 70vw;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pill .tag {
+            font-weight: 950;
+            padding: 4px 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, .12);
+            background: rgba(255, 255, 255, .06);
+            white-space: nowrap;
+        }
+
+        .pill .mini {
+            color: var(--muted);
+            font-weight: 800;
+            white-space: nowrap
         }
 
         .btn {
@@ -82,7 +103,7 @@
             color: var(--text);
             padding: 8px 10px;
             border-radius: 12px;
-            font-weight: 900;
+            font-weight: 950;
             cursor: pointer;
             user-select: none;
             backdrop-filter: blur(10px);
@@ -101,6 +122,11 @@
             background: rgba(18, 26, 36, .55);
         }
 
+        .btn.small {
+            padding: 8px 9px;
+            font-size: 13px
+        }
+
         /* Overlays */
         .overlay {
             position: fixed;
@@ -109,24 +135,24 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 18px;
-            background: radial-gradient(1000px 700px at 50% 35%, rgba(255, 255, 255, .08), rgba(0, 0, 0, .62));
+            padding: 16px;
+            background: radial-gradient(1000px 700px at 50% 35%, rgba(255, 255, 255, .10), rgba(0, 0, 0, .68));
             backdrop-filter: blur(6px);
         }
 
         .card {
-            width: min(560px, 94vw);
+            width: min(560px, 96vw);
             border-radius: 18px;
             background: var(--panel);
             border: 1px solid var(--line);
-            padding: 16px;
+            padding: 14px;
             box-shadow: var(--shadow);
         }
 
         .title {
-            margin: 0 0 8px;
+            margin: 0 0 6px;
             font-size: 18px;
-            font-weight: 950;
+            font-weight: 980;
             letter-spacing: .2px
         }
 
@@ -144,6 +170,10 @@
             align-items: center
         }
 
+        .row.tight {
+            gap: 8px
+        }
+
         select,
         label.chk {
             background: rgba(255, 255, 255, .08);
@@ -151,16 +181,18 @@
             color: var(--text);
             padding: 10px 10px;
             border-radius: 12px;
-            font-weight: 900;
+            font-weight: 950;
             outline: none;
             flex: 1 1 200px;
+            min-width: 160px;
         }
 
         label.chk {
             display: flex;
             align-items: center;
             gap: 8px;
-            cursor: pointer
+            cursor: pointer;
+            flex: 1 1 180px;
         }
 
         label.chk input {
@@ -179,18 +211,39 @@
             background: rgba(0, 0, 0, .18);
             border-radius: 14px;
             padding: 10px 12px;
-            font-weight: 900;
+            font-weight: 950;
         }
 
         .stat small {
             display: block;
             color: var(--muted);
-            font-weight: 750;
+            font-weight: 800;
             margin-bottom: 6px
         }
 
         .hide {
             display: none !important
+        }
+
+        /* Mobile tweaks */
+        @media (max-width: 420px) {
+            .pill {
+                max-width: 64vw;
+                padding: 8px 9px;
+            }
+
+            select,
+            label.chk {
+                min-width: 140px;
+            }
+
+            .btn {
+                padding: 8px 9px;
+            }
+
+            .grid2 {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -201,12 +254,13 @@
 
     <div class="hud" id="hud">
         <div class="pill" id="scorePill">
-            YOU <span id="sYou">0</span> : <span id="sAI">0</span> AI
-            <span id="modeLabel">NORMAL</span>
+            <span class="tag" id="diffTag">NORMAL</span>
+            <span class="tag" id="personaTag">DEFENSIVE</span>
+            <span class="mini">YOU <span id="sYou">0</span> : <span id="sAI">0</span> AI</span>
         </div>
         <div class="right">
-            <button class="btn ghost" id="pauseBtn">Pause</button>
-            <button class="btn" id="resetBtn">Reset</button>
+            <button class="btn ghost small" id="pauseBtn">Pause</button>
+            <button class="btn small" id="resetBtn">Reset</button>
         </div>
     </div>
 
@@ -215,8 +269,8 @@
         <div class="card">
             <h1 class="title">Air Hockey Pro</h1>
             <p class="sub">
-                Drag anywhere on the <b>bottom half</b> to move your paddle. Tap to serve.
-                Install as a PWA for best Android fullscreen feel.
+                Drag on the <b>bottom half</b> to move. Tap anywhere to serve.
+                Install as a PWA for the best Android full-screen feel.
             </p>
 
             <div class="row">
@@ -229,19 +283,32 @@
                     <option value="legendary">Legendary (Learns you)</option>
                 </select>
 
-                <label class="chk">
+                <select id="personaSel" title="AI Personality">
+                    <option value="defensive" selected>AI: Defensive</option>
+                    <option value="aggressive">AI: Aggressive</option>
+                    <option value="trickshot">AI: Trickshot</option>
+                </select>
+            </div>
+
+            <div class="row tight">
+                <label class="chk" title="Sound">
                     <input type="checkbox" id="soundToggle" checked />
                     Sound
+                </label>
+
+                <label class="chk" title="Haptics / vibration (Android)">
+                    <input type="checkbox" id="hapticsToggle" checked />
+                    Haptics
                 </label>
             </div>
 
             <div class="grid2">
                 <div class="stat">
-                    <small>Profile (Legendary)</small>
-                    <div id="profileLine">No data yet</div>
+                    <small>Legendary profile</small>
+                    <div id="profileLine">Collecting data…</div>
                 </div>
                 <div class="stat">
-                    <small>Match Target</small>
+                    <small>Match target</small>
                     <div>First to <span id="targetLabel">7</span></div>
                 </div>
             </div>
@@ -283,14 +350,17 @@
                 hud: document.getElementById("hud"),
                 sYou: document.getElementById("sYou"),
                 sAI: document.getElementById("sAI"),
-                modeLabel: document.getElementById("modeLabel"),
+                diffTag: document.getElementById("diffTag"),
+                personaTag: document.getElementById("personaTag"),
                 resetBtn: document.getElementById("resetBtn"),
                 pauseBtn: document.getElementById("pauseBtn"),
 
                 menu: document.getElementById("menu"),
                 startBtn: document.getElementById("startBtn"),
                 diffSel: document.getElementById("diffSel"),
+                personaSel: document.getElementById("personaSel"),
                 soundToggle: document.getElementById("soundToggle"),
+                hapticsToggle: document.getElementById("hapticsToggle"),
                 targetLabel: document.getElementById("targetLabel"),
                 profileLine: document.getElementById("profileLine"),
                 installBtn: document.getElementById("installBtn"),
@@ -308,7 +378,14 @@
                 });
             }
 
-            // -------------------- Audio (generated, no files) --------------------
+            // -------------------- Haptics (optional) --------------------
+            function vibrate(pattern) {
+                if (!ui.hapticsToggle.checked) return;
+                if (!("vibrate" in navigator)) return;
+                try { navigator.vibrate(pattern); } catch { }
+            }
+
+            // -------------------- Audio (generated) --------------------
             let audioCtx = null;
             function ensureAudio() {
                 if (!ui.soundToggle.checked) return;
@@ -346,7 +423,6 @@
                 }
             };
             window.addEventListener("pointerdown", ensureAudio, { passive: true });
-            window.addEventListener("keydown", ensureAudio, { passive: true });
 
             // -------------------- Resize --------------------
             function resize() {
@@ -362,67 +438,55 @@
 
             // -------------------- Game constants --------------------
             const GAME = { targetScore: 7, fixedDt: 1 / 120, maxFrame: 1 / 30 };
-
-            const table = {
-                wall: 10,
-                pad: 22,
-                goalWidthFrac: 0.34,
-            };
+            const table = { wall: 10, pad: 22, goalWidthFrac: 0.34 };
 
             // Entities
-            const puck = { x: 0, y: 0, r: 10, vx: 0, vy: 0, max: 1550 };
+            const puck = { x: 0, y: 0, r: 10, vx: 0, vy: 0, max: 1600, glow: 0 };
             const you = { x: 0, y: 0, r: 22, vx: 0, vy: 0 };
             const ai = { x: 0, y: 0, r: 22, vx: 0, vy: 0 };
 
-            // -------------------- Learning profile (stored) --------------------
-            // We store simple behavioral signals to help AI counter your habits:
-            // - where you hit from (x), and where the puck tends to go after your hit (vx sign)
-            // - your “favorite” side (left/right) and typical shot angle
-            const PROFILE_KEY = "ah_profile_v1";
-            function loadProfile() {
-                try {
-                    const raw = localStorage.getItem(PROFILE_KEY);
-                    if (!raw) return null;
-                    return JSON.parse(raw);
-                } catch { return null; }
-            }
-            function saveProfile(p) {
-                try { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch { }
-            }
-            function resetProfile() {
-                try { localStorage.removeItem(PROFILE_KEY); } catch { }
-                profile = makeFreshProfile();
-                updateProfileUI();
-            }
-            function makeFreshProfile() {
-                return {
-                    samples: 0,
-                    emaHitX: 0.5,           // normalized 0..1
-                    emaShotDir: 0.0,        // -1..+1, negative = tends left, positive = tends right
-                    emaShotAngle: 0.0,      // -1..+1, negative = down-left, positive = down-right
-                    emaAggression: 0.0,     // how often you push toward mid
-                    lastUpdate: Date.now()
-                };
+            // -------------------- Particles (for nice hits) --------------------
+            const sparks = [];
+            function addSparks(x, y, n, strength) {
+                for (let i = 0; i < n; i++) {
+                    sparks.push({
+                        x, y,
+                        vx: (Math.random() * 2 - 1) * (120 + 260 * strength),
+                        vy: (Math.random() * 2 - 1) * (120 + 260 * strength),
+                        life: 0.18 + Math.random() * 0.22
+                    });
+                }
             }
 
+            // -------------------- Learning profile --------------------
+            const PROFILE_KEY = "ah_profile_v2";
+            function makeFreshProfile() {
+                return { samples: 0, emaHitX: 0.5, emaShotDir: 0, emaAggression: 0, lastUpdate: Date.now() };
+            }
+            function loadProfile() { try { const r = localStorage.getItem(PROFILE_KEY); return r ? JSON.parse(r) : null; } catch { return null; } }
+            function saveProfile(p) { try { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch { } }
             let profile = loadProfile() || makeFreshProfile();
 
             function updateProfileUI() {
-                if (!profile || profile.samples < 8) {
+                if (!profile || profile.samples < 10) {
                     ui.profileLine.textContent = "Collecting data…";
                     return;
                 }
-                const side = profile.emaShotDir < -0.15 ? "Left" : (profile.emaShotDir > 0.15 ? "Right" : "Balanced");
-                const hx = Math.round(profile.emaHitX * 100);
-                ui.profileLine.textContent = `${profile.samples} hits • bias: ${side} • hit-x: ${hx}%`;
+                const bias = profile.emaShotDir < -0.15 ? "Left" : (profile.emaShotDir > 0.15 ? "Right" : "Balanced");
+                ui.profileLine.textContent = `${profile.samples} hits • bias: ${bias}`;
             }
             updateProfileUI();
 
-            ui.clearLearnBtn.addEventListener("click", resetProfile);
+            ui.clearLearnBtn.addEventListener("click", () => {
+                try { localStorage.removeItem(PROFILE_KEY); } catch { }
+                profile = makeFreshProfile();
+                updateProfileUI();
+            });
 
             // -------------------- State --------------------
             const state = {
                 diff: "normal",
+                persona: "defensive",
                 scoreYou: 0,
                 scoreAI: 0,
                 running: false,
@@ -433,95 +497,65 @@
                 acc: 0,
                 pointerDown: false,
                 youTarget: { x: 0, y: 0 },
-                // internal tracking for learning (detect your hits)
                 lastPuckV: { vx: 0, vy: 0 },
-                lastHitBy: null,  // "you" | "ai"
             };
 
             // -------------------- Difficulty tuning --------------------
-            // Legendary uses learning profile + stronger adaptive.
             function baseParamsByDifficulty(d) {
                 switch (d) {
-                    case "easy": return { speed: 1050, pressure: 0.35, predict: 0.45, shotPower: 0.70, adapt: 0.10, learn: 0.00 };
-                    case "normal": return { speed: 1250, pressure: 0.50, predict: 0.60, shotPower: 0.82, adapt: 0.14, learn: 0.00 };
-                    case "smart": return { speed: 1400, pressure: 0.62, predict: 0.72, shotPower: 0.90, adapt: 0.18, learn: 0.05 };
-                    case "hard": return { speed: 1550, pressure: 0.72, predict: 0.82, shotPower: 0.94, adapt: 0.22, learn: 0.08 };
-                    case "pro": return { speed: 1700, pressure: 0.82, predict: 0.90, shotPower: 0.97, adapt: 0.26, learn: 0.10 };
-                    case "legendary": return { speed: 1850, pressure: 0.90, predict: 0.95, shotPower: 0.99, adapt: 0.32, learn: 0.22 };
-                    default: return { speed: 1250, pressure: 0.50, predict: 0.60, shotPower: 0.82, adapt: 0.14, learn: 0.00 };
+                    case "easy": return { speed: 1020, pressure: 0.30, predict: 0.40, shotPower: 0.65, adapt: 0.08, learn: 0.00 };
+                    case "normal": return { speed: 1250, pressure: 0.48, predict: 0.58, shotPower: 0.78, adapt: 0.12, learn: 0.00 };
+                    case "smart": return { speed: 1400, pressure: 0.60, predict: 0.70, shotPower: 0.86, adapt: 0.16, learn: 0.06 };
+                    case "hard": return { speed: 1560, pressure: 0.72, predict: 0.82, shotPower: 0.92, adapt: 0.20, learn: 0.08 };
+                    case "pro": return { speed: 1720, pressure: 0.82, predict: 0.90, shotPower: 0.96, adapt: 0.24, learn: 0.10 };
+                    case "legendary": return { speed: 1880, pressure: 0.90, predict: 0.95, shotPower: 0.99, adapt: 0.30, learn: 0.22 };
+                    default: return { speed: 1250, pressure: 0.48, predict: 0.58, shotPower: 0.78, adapt: 0.12, learn: 0.00 };
+                }
+            }
+
+            function personaModifiers(persona) {
+                // personality changes behavior, not just raw speed
+                switch (persona) {
+                    case "defensive": return { pressureMul: 0.85, bankBias: 0.40, goalieSnap: 1.15, trickRate: 0.10 };
+                    case "aggressive": return { pressureMul: 1.20, bankBias: 0.55, goalieSnap: 0.95, trickRate: 0.12 };
+                    case "trickshot": return { pressureMul: 1.05, bankBias: 0.85, goalieSnap: 1.00, trickRate: 0.32 };
+                    default: return { pressureMul: 1.00, bankBias: 0.55, goalieSnap: 1.00, trickRate: 0.12 };
                 }
             }
 
             function effectiveAIParams() {
                 const base = baseParamsByDifficulty(state.diff);
-                // adaptive: if you lead, AI gets stronger; if AI leads, slightly relax but still competitive
-                const diffScore = (state.scoreYou - state.scoreAI); // positive => you leading
+                const pm = personaModifiers(state.persona);
+
+                // adaptive: if you lead, AI boosts a bit
+                const diffScore = (state.scoreYou - state.scoreAI);
                 const boost = clamp(diffScore * base.adapt, -0.18, 0.40);
 
-                // legendary learns your bias and counters it by choosing target corners/banks accordingly.
+                // legendary “growth”
                 let learnBoost = 0;
-                if (state.diff === "legendary") {
-                    learnBoost = clamp((profile.samples / 200), 0, 0.25); // grows over time
-                }
+                if (state.diff === "legendary") learnBoost = clamp(profile.samples / 250, 0, 0.25);
 
                 return {
-                    speed: base.speed * (1 + boost + learnBoost * 0.35),
-                    pressure: clamp(base.pressure + boost * 0.9 + learnBoost * 0.25, 0.30, 0.98),
+                    speed: base.speed * (1 + boost + learnBoost * 0.30),
+                    pressure: clamp(base.pressure * pm.pressureMul + boost * 0.8 + learnBoost * 0.25, 0.25, 0.98),
                     predict: clamp(base.predict + boost * 0.6 + learnBoost * 0.25, 0.35, 0.99),
-                    shotPower: clamp(base.shotPower + boost * 0.35 + learnBoost * 0.20, 0.65, 1.0),
-                    learn: base.learn,
+                    shotPower: clamp(base.shotPower + boost * 0.25 + learnBoost * 0.20, 0.60, 1.0),
+                    bankBias: pm.bankBias,
+                    goalieSnap: pm.goalieSnap,
+                    trickRate: pm.trickRate,
+                    learn: base.learn
                 };
             }
 
-            // -------------------- Pointer controls (bottom half) --------------------
-            function setTarget(e) {
-                state.youTarget.x = e.clientX;
-                state.youTarget.y = e.clientY;
-            }
-
-            canvas.addEventListener("pointerdown", (e) => {
-                state.pointerDown = true;
-                setTarget(e);
-                if (state.running && state.paused && !state.gameOver) serve();
-            }, { passive: true });
-
-            canvas.addEventListener("pointermove", (e) => {
-                if (!state.pointerDown) return;
-                setTarget(e);
-            }, { passive: true });
-
+            // -------------------- Input --------------------
+            function setTarget(e) { state.youTarget.x = e.clientX; state.youTarget.y = e.clientY; }
+            canvas.addEventListener("pointerdown", (e) => { state.pointerDown = true; setTarget(e); if (state.running && state.paused && !state.gameOver) serve(); }, { passive: true });
+            canvas.addEventListener("pointermove", (e) => { if (!state.pointerDown) return; setTarget(e); }, { passive: true });
             canvas.addEventListener("pointerup", () => state.pointerDown = false, { passive: true });
             canvas.addEventListener("pointercancel", () => state.pointerDown = false, { passive: true });
+            canvas.addEventListener("mousemove", (e) => { if (state.pointerDown) return; state.youTarget.x = e.clientX; state.youTarget.y = e.clientY; }, { passive: true });
 
-            // desktop mouse hover
-            canvas.addEventListener("mousemove", (e) => {
-                if (state.pointerDown) return;
-                state.youTarget.x = e.clientX;
-                state.youTarget.y = e.clientY;
-            }, { passive: true });
-
-            // -------------------- Buttons --------------------
-            ui.resetBtn.addEventListener("click", () => {
-                state.scoreYou = 0;
-                state.scoreAI = 0;
-                ui.sYou.textContent = "0";
-                ui.sAI.textContent = "0";
-                state.gameOver = false;
-                state.paused = true;
-                state.message = "Tap to serve";
-                resetPositions();
-                showHUD(true);
-            });
-
-            ui.pauseBtn.addEventListener("click", () => {
-                if (!state.running) return;
-                if (state.gameOver) return;
-                togglePause();
-            });
-
-            ui.resumeBtn.addEventListener("click", () => togglePause(false));
-            ui.backToMenuBtn.addEventListener("click", () => backToMenu());
-
+            // -------------------- UI actions --------------------
             ui.installBtn.addEventListener("click", async () => {
                 if (!deferredPrompt) return;
                 deferredPrompt.prompt();
@@ -529,34 +563,43 @@
                 deferredPrompt = null;
             });
 
+            ui.resetBtn.addEventListener("click", () => {
+                state.scoreYou = 0; state.scoreAI = 0;
+                ui.sYou.textContent = "0"; ui.sAI.textContent = "0";
+                state.gameOver = false; state.paused = true; state.message = "Tap to serve";
+                resetPositions();
+            });
+
+            ui.pauseBtn.addEventListener("click", () => {
+                if (!state.running || state.gameOver) return;
+                togglePause();
+            });
+            ui.resumeBtn.addEventListener("click", () => togglePause(false));
+            ui.backToMenuBtn.addEventListener("click", () => backToMenu());
+
             ui.startBtn.addEventListener("click", () => {
                 state.diff = ui.diffSel.value;
-                ui.modeLabel.textContent = state.diff.toUpperCase();
+                state.persona = ui.personaSel.value;
+                ui.diffTag.textContent = state.diff.toUpperCase();
+                ui.personaTag.textContent = state.persona.toUpperCase();
                 state.running = true;
                 state.gameOver = false;
                 state.paused = true;
                 state.message = "Tap to serve";
                 ui.menu.classList.add("hide");
                 resetPositions();
-                showHUD(true);
             });
 
             function backToMenu() {
-                state.running = false;
-                state.paused = true;
-                state.gameOver = false;
-                state.message = "Tap to serve";
+                state.running = false; state.paused = true; state.gameOver = false; state.message = "Tap Start";
                 ui.pauseOverlay.classList.add("hide");
                 ui.menu.classList.remove("hide");
-                showHUD(true);
                 resetPositions();
             }
 
-            // -------------------- Pause / Resume --------------------
             function togglePause(force) {
                 const next = (typeof force === "boolean") ? force : !state.paused;
                 state.paused = next;
-
                 if (state.paused) {
                     ui.pauseOverlay.classList.remove("hide");
                     state.message = "Paused";
@@ -566,40 +609,26 @@
                 }
             }
 
-            function showHUD(show) {
-                ui.hud.classList.toggle("hide", !show);
-            }
-
-            // After first serve, keep HUD small but still visible (professional feel).
-            // If you want full-screen play, set this to false.
-            const HIDE_HUD_AFTER_SERVE = false;
-
             // -------------------- Core helpers --------------------
             function resetPositions() {
                 const { w, h } = dims();
-                puck.x = w / 2; puck.y = h / 2; puck.vx = 0; puck.vy = 0;
+                puck.x = w / 2; puck.y = h / 2; puck.vx = 0; puck.vy = 0; puck.glow = 0;
                 you.x = w / 2; you.y = h * 0.78; you.vx = you.vy = 0;
                 ai.x = w / 2; ai.y = h * 0.22; ai.vx = ai.vy = 0;
                 state.youTarget = { x: w / 2, y: h * 0.78 };
                 state.lastPuckV = { vx: 0, vy: 0 };
-                state.lastHitBy = null;
+                sparks.length = 0;
             }
 
             function serve() {
                 if (!state.running || !state.paused || state.gameOver) return;
-
-                // serve slight randomness, not “aim drift”
                 const dir = (Math.random() < 0.5) ? -1 : 1;
                 const ang = (Math.random() * 0.55 - 0.275);
                 const speed = 560;
-
                 puck.vx = Math.sin(ang) * speed;
                 puck.vy = dir * Math.cos(ang) * speed;
-
                 state.paused = false;
                 state.message = "";
-
-                if (HIDE_HUD_AFTER_SERVE) showHUD(false);
             }
 
             function collideDisc(pad, puckObj) {
@@ -609,15 +638,11 @@
                 const minD = pad.r + puckObj.r;
                 if (dist <= 0.0001 || dist >= minD) return false;
 
-                const nx = dx / dist;
-                const ny = dy / dist;
-
-                // separate
+                const nx = dx / dist, ny = dy / dist;
                 const overlap = (minD - dist);
                 puckObj.x += nx * overlap;
                 puckObj.y += ny * overlap;
 
-                // relative velocity
                 const rvx = puckObj.vx - pad.vx;
                 const rvy = puckObj.vy - pad.vy;
                 const vn = rvx * nx + rvy * ny;
@@ -628,18 +653,19 @@
                 puckObj.vx += j * nx;
                 puckObj.vy += j * ny;
 
-                // paddle transfer
                 puckObj.vx += pad.vx * 0.32;
                 puckObj.vy += pad.vy * 0.32;
 
-                // light tangential “spin”
                 const tx = -ny, ty = nx;
                 const vt = rvx * tx + rvy * ty;
                 puckObj.vx += tx * vt * 0.02;
                 puckObj.vy += ty * vt * 0.02;
 
                 const hit = clamp(Math.abs(vn) / 950, 0, 1);
+                puck.glow = Math.min(1, puck.glow + 0.55 * hit);
                 sfx.hit(hit);
+                addSparks(puckObj.x, puckObj.y, 10 + Math.floor(10 * hit), hit);
+                vibrate(hit > 0.55 ? [12, 18, 12] : 10);
                 return true;
             }
 
@@ -648,40 +674,37 @@
                 const goalW = w * table.goalWidthFrac;
                 const gx1 = (w - goalW) / 2;
                 const gx2 = (w + goalW) / 2;
-
                 const inMouth = (puck.x > gx1 && puck.x < gx2);
 
-                // top goal => YOU scored
                 if (puck.y - puck.r <= table.wall) {
                     if (inMouth) { onGoal("you"); return; }
                     puck.y = table.wall + puck.r;
                     puck.vy = Math.abs(puck.vy) * 0.985;
-                    sfx.wall();
+                    sfx.wall(); vibrate(6);
                 }
-
-                // bottom goal => AI scored
                 if (puck.y + puck.r >= h - table.wall) {
                     if (inMouth) { onGoal("ai"); return; }
                     puck.y = (h - table.wall) - puck.r;
                     puck.vy = -Math.abs(puck.vy) * 0.985;
-                    sfx.wall();
+                    sfx.wall(); vibrate(6);
                 }
 
-                // sides
                 if (puck.x - puck.r <= table.wall) {
                     puck.x = table.wall + puck.r;
                     puck.vx = Math.abs(puck.vx) * 0.985;
-                    sfx.wall();
+                    sfx.wall(); vibrate(6);
                 }
                 if (puck.x + puck.r >= w - table.wall) {
                     puck.x = (w - table.wall) - puck.r;
                     puck.vx = -Math.abs(puck.vx) * 0.985;
-                    sfx.wall();
+                    sfx.wall(); vibrate(6);
                 }
             }
 
             function onGoal(who) {
                 sfx.goal();
+                vibrate([18, 24, 18]);
+
                 if (who === "you") state.scoreYou++;
                 else state.scoreAI++;
 
@@ -693,15 +716,14 @@
                     state.gameOver = true;
                     state.message = (state.scoreYou > state.scoreAI) ? "You win! Press Reset" : "AI wins! Press Reset";
                     sfx.win();
+                    vibrate([30, 40, 30, 40, 30]);
                     puck.vx = puck.vy = 0;
-                    showHUD(true);
                     return;
                 }
 
                 resetPositions();
                 state.paused = true;
                 state.message = (who === "you") ? "Goal! Tap to serve" : "AI scored. Tap to serve";
-                showHUD(true);
             }
 
             function movePad(pad, target, dt, speed, half) {
@@ -710,12 +732,10 @@
 
                 let tx = clamp(target.x, table.pad, w - table.pad);
                 let ty = target.y;
-
                 if (half === "bottom") ty = clamp(ty, mid + table.pad, h - table.pad);
                 else ty = clamp(ty, table.pad, mid - table.pad);
 
-                const dx = tx - pad.x;
-                const dy = ty - pad.y;
+                const dx = tx - pad.x, dy = ty - pad.y;
                 const dist = Math.hypot(dx, dy);
 
                 if (dist > 0.001) {
@@ -725,17 +745,14 @@
                     const nyp = pad.y + ny * step;
                     pad.vx = (nxp - pad.x) / dt;
                     pad.vy = (nyp - pad.y) / dt;
-                    pad.x = nxp;
-                    pad.y = nyp;
+                    pad.x = nxp; pad.y = nyp;
                 } else {
-                    pad.vx *= 0.45;
-                    pad.vy *= 0.45;
+                    pad.vx *= 0.45; pad.vy *= 0.45;
                 }
             }
 
-            // -------------------- AI prediction / bank shots / learning counter --------------------
+            // -------------------- AI logic --------------------
             function predictPuckXAtY(targetY) {
-                // lightweight simulation with wall bounces
                 const { w } = dims();
                 const left = table.wall + puck.r;
                 const right = (w - table.wall) - puck.r;
@@ -745,12 +762,9 @@
 
                 for (let i = 0; i < 160; i++) {
                     const dt = 1 / 240;
-                    x += vx * dt;
-                    y += vy * dt;
-
+                    x += vx * dt; y += vy * dt;
                     if (x <= left) { x = left + (left - x); vx = Math.abs(vx); }
                     if (x >= right) { x = right - (x - right); vx = -Math.abs(vx); }
-
                     if ((vy < 0 && y <= targetY) || (vy > 0 && y >= targetY)) return x;
                 }
                 return x;
@@ -760,25 +774,14 @@
                 const { w } = dims();
                 const left = table.wall + puck.r;
                 const right = (w - table.wall) - puck.r;
-                // pick bank side deterministically based on puck position
                 const goLeft = puck.x > w / 2;
                 return goLeft ? (left - (targetX - left)) : (right + (right - targetX));
             }
 
             function legendaryCounterCorner(goalLeftX, goalRightX) {
-                // If player tends to shoot to RIGHT, AI should defend/right and attack/left (and vice versa).
-                // emaShotDir: negative => player tends left; positive => tends right
                 if (profile.samples < 10) return (puck.x > (goalLeftX + goalRightX) / 2) ? goalLeftX : goalRightX;
-
-                if (profile.emaShotDir > 0.12) {
-                    // player likes right -> AI targets left corner more often
-                    return goalLeftX;
-                }
-                if (profile.emaShotDir < -0.12) {
-                    // player likes left -> AI targets right corner more often
-                    return goalRightX;
-                }
-                // balanced
+                if (profile.emaShotDir > 0.12) return goalLeftX;
+                if (profile.emaShotDir < -0.12) return goalRightX;
                 return (puck.x > (goalLeftX + goalRightX) / 2) ? goalLeftX : goalRightX;
             }
 
@@ -788,18 +791,20 @@
                 const P = effectiveAIParams();
 
                 // Defensive intercept line
-                const interceptY = h * 0.26;
+                let interceptY = h * 0.26;
+                // Defensive personality snaps more strongly to goalie line
+                interceptY *= clamp(P.goalieSnap, 0.9, 1.25);
 
                 const puckInAiHalf = (puck.y < midY);
                 const puckComingUp = (puck.vy < -40);
 
-                // defend if threatened
+                // DEFEND
                 if (puckComingUp || puckInAiHalf) {
                     const px = predictPuckXAtY(interceptY);
                     return { x: clamp(px, table.pad, w - table.pad), y: clamp(interceptY, table.pad, midY - table.pad), speed: P.speed };
                 }
 
-                // otherwise pressure forward (aggressive)
+                // PRESSURE
                 const pressureY = clamp(h * (0.26 + 0.18 * P.pressure), table.pad, midY - table.pad);
                 return { x: clamp(puck.x, table.pad, w - table.pad), y: pressureY, speed: P.speed };
             }
@@ -807,31 +812,36 @@
             function aiShotAssist() {
                 const { w, h } = dims();
                 const P = effectiveAIParams();
-                const dx = puck.x - ai.x;
-                const dy = puck.y - ai.y;
+
+                const dx = puck.x - ai.x, dy = puck.y - ai.y;
                 const dist = Math.hypot(dx, dy);
-                if (dist > 140) return null;
+                if (dist > 145) return null;
 
                 const goalW = w * table.goalWidthFrac;
                 const gx1 = (w - goalW) / 2;
                 const gx2 = (w + goalW) / 2;
 
                 // choose target corner
-                const targetXCorner = (state.diff === "legendary")
+                const targetCorner = (state.diff === "legendary")
                     ? legendaryCounterCorner(gx1 + 12, gx2 - 12)
                     : (puck.x > w / 2 ? (gx1 + 12) : (gx2 - 12));
 
-                const targetY = h - table.wall - 6;
-
-                // bank if puck far from center
+                // trickshot personality: more banks + occasional “fake tap”
                 const offCenter = Math.abs(puck.x - w / 2) / (w / 2);
-                const useBank = offCenter > 0.35;
+                const bankChance = clamp(P.bankBias * (0.35 + offCenter), 0, 0.95);
+                const useBank = (Math.random() < bankChance) && (offCenter > 0.15);
 
-                const aimX = useBank ? reflectXForBank(targetXCorner) : targetXCorner;
-                const aimY = targetY;
+                // fake tap: very small sideways nudge positioning (doesn't change physics directly, changes aim point)
+                let aimX = targetCorner;
+                if (state.persona === "trickshot" && Math.random() < P.trickRate) {
+                    aimX = (puck.x > w / 2) ? (gx2 - 10) : (gx1 + 10);
+                }
 
-                // place AI behind puck to drive toward aim
-                const vx = aimX - puck.x;
+                const aimY = h - table.wall - 6;
+                const finalAimX = useBank ? reflectXForBank(aimX) : aimX;
+
+                // place AI behind puck to drive towards aim
+                const vx = finalAimX - puck.x;
                 const vy = aimY - puck.y;
                 const L = Math.hypot(vx, vy) || 1;
                 const backoff = 28 * (0.9 + 0.2 * P.shotPower);
@@ -839,91 +849,88 @@
                 const tx = puck.x - (vx / L) * backoff;
                 const ty = puck.y - (vy / L) * backoff;
 
-                // clamp to AI half
                 const midY = h / 2;
-                return {
-                    x: clamp(tx, table.pad, w - table.pad),
-                    y: clamp(ty, table.pad, midY - table.pad),
-                };
+                return { x: clamp(tx, table.pad, w - table.pad), y: clamp(ty, table.pad, midY - table.pad) };
             }
 
-            // -------------------- Learning: update profile when YOU hit puck --------------------
+            // -------------------- Learning update (when YOU hit puck) --------------------
             function updateLearningOnHit() {
-                const P = baseParamsByDifficulty(state.diff);
-                const learnRate = P.learn;
+                const base = baseParamsByDifficulty(state.diff);
+                const learnRate = base.learn;
                 if (learnRate <= 0) return;
 
-                // Detect "player hit": last hitter is you
-                // We'll update after collision sets puck velocity.
                 const { w, h } = dims();
                 const nx = clamp(you.x / w, 0, 1);
-
-                const dir = clamp(puck.vx / (Math.abs(puck.vx) + 250), -1, 1); // -1..+1
-                const ang = clamp(puck.vx / (Math.abs(puck.vy) + 250), -1, 1);
+                const dir = clamp(puck.vx / (Math.abs(puck.vx) + 250), -1, 1);
 
                 const mid = h / 2;
-                const aggression = clamp((mid - you.y) / mid, -1, 1); // closer to mid => more aggressive
+                const aggression = clamp((mid - you.y) / mid, -1, 1);
 
-                const alpha = learnRate;
-
+                const a = learnRate;
                 profile.samples = (profile.samples || 0) + 1;
-                profile.emaHitX = profile.emaHitX + alpha * (nx - profile.emaHitX);
-                profile.emaShotDir = profile.emaShotDir + alpha * (dir - profile.emaShotDir);
-                profile.emaShotAngle = profile.emaShotAngle + alpha * (ang - profile.emaShotAngle);
-                profile.emaAggression = profile.emaAggression + alpha * (aggression - profile.emaAggression);
+                profile.emaHitX = profile.emaHitX + a * (nx - profile.emaHitX);
+                profile.emaShotDir = profile.emaShotDir + a * (dir - profile.emaShotDir);
+                profile.emaAggression = profile.emaAggression + a * (aggression - profile.emaAggression);
                 profile.lastUpdate = Date.now();
 
-                // Persist occasionally
                 if (profile.samples % 5 === 0) saveProfile(profile);
                 updateProfileUI();
             }
 
-            // -------------------- Loop (fixed timestep) --------------------
+            // -------------------- Update loop --------------------
             function step(dt) {
                 const { w, h } = dims();
                 const mid = h / 2;
 
-                // clamp your target to bottom half
+                // player
                 const tx = clamp(state.youTarget.x || you.x, table.pad, w - table.pad);
                 const ty = clamp(state.youTarget.y || you.y, mid + table.pad, h - table.pad);
-
-                // move player (smooth + responsive)
                 movePad(you, { x: tx, y: ty }, dt, 2600, "bottom");
 
-                // move AI (predict + pressure + shot assist)
+                // AI
                 const P = effectiveAIParams();
                 const base = computeAiTarget();
                 const shot = aiShotAssist();
-                const aiTarget = shot || { x: base.x, y: base.y };
+                const aTarget = shot || { x: base.x, y: base.y };
+                movePad(ai, aTarget, dt, P.speed, "top");
 
-                movePad(ai, aiTarget, dt, P.speed, "top");
+                // particles update
+                for (let i = sparks.length - 1; i >= 0; i--) {
+                    const s = sparks[i];
+                    s.life -= dt;
+                    s.x += s.vx * dt;
+                    s.y += s.vy * dt;
+                    s.vx *= Math.exp(-5.5 * dt);
+                    s.vy *= Math.exp(-5.5 * dt);
+                    if (s.life <= 0) sparks.splice(i, 1);
+                }
+
+                // glow decay
+                puck.glow *= Math.exp(-6.5 * dt);
 
                 if (state.paused || state.gameOver) return;
 
-                // save old velocity for hit detection
                 state.lastPuckV.vx = puck.vx;
                 state.lastPuckV.vy = puck.vy;
 
-                // integrate puck
+                // puck integrate
                 puck.x += puck.vx * dt;
                 puck.y += puck.vy * dt;
 
-                // friction (air feel)
-                const fr = Math.exp(-0.68 * dt);
-                puck.vx *= fr;
-                puck.vy *= fr;
+                // friction
+                const fr = Math.exp(-0.66 * dt);
+                puck.vx *= fr; puck.vy *= fr;
 
                 // clamp speed
-                const s = Math.hypot(puck.vx, puck.vy);
-                if (s > puck.max) {
-                    const k = puck.max / s;
+                const sp = Math.hypot(puck.vx, puck.vy);
+                if (sp > puck.max) {
+                    const k = puck.max / sp;
                     puck.vx *= k; puck.vy *= k;
                 }
 
-                // collisions (detect your hit)
+                // collisions
                 const hitYou = collideDisc(you, puck);
                 if (hitYou) {
-                    // if puck velocity changed a lot, treat as a meaningful hit
                     const dv = Math.hypot(puck.vx - state.lastPuckV.vx, puck.vy - state.lastPuckV.vy);
                     if (dv > 60) updateLearningOnHit();
                 }
@@ -939,21 +946,35 @@
                 }
             }
 
+            // -------------------- Drawing (more attractive) --------------------
             function draw() {
                 const { w, h } = dims();
                 const mid = h / 2;
 
-                // surface
-                ctx.fillStyle = "#0f2740";
+                // background
+                ctx.fillStyle = "#070b12";
                 ctx.fillRect(0, 0, w, h);
 
-                // subtle gradients
+                // table base gradient
                 const g = ctx.createLinearGradient(0, 0, 0, h);
-                g.addColorStop(0, "rgba(255,255,255,.04)");
-                g.addColorStop(0.5, "rgba(255,255,255,.00)");
-                g.addColorStop(1, "rgba(0,0,0,.18)");
+                g.addColorStop(0, "#0c1a2a");
+                g.addColorStop(0.55, "#0b2036");
+                g.addColorStop(1, "#071522");
                 ctx.fillStyle = g;
                 ctx.fillRect(0, 0, w, h);
+
+                // star/texture dots
+                ctx.globalAlpha = 0.10;
+                ctx.fillStyle = "#ffffff";
+                for (let i = 0; i < 160; i++) {
+                    const x = (i * 53) % w;
+                    const y = (i * 97) % h;
+                    ctx.fillRect(x, y, 1, 1);
+                }
+                ctx.globalAlpha = 1;
+
+                // glowing rails
+                drawRailGlow(w, h);
 
                 // walls
                 ctx.fillStyle = "rgba(255,255,255,.10)";
@@ -965,35 +986,35 @@
                 // goals
                 const goalW = w * table.goalWidthFrac;
                 const gx1 = (w - goalW) / 2;
-                ctx.fillStyle = "#071522";
+                ctx.fillStyle = "rgba(0,0,0,.35)";
                 ctx.fillRect(gx1, 0, goalW, table.wall);
                 ctx.fillRect(gx1, h - table.wall, goalW, table.wall);
 
-                // center
-                ctx.strokeStyle = "rgba(233,240,255,.35)";
+                // center line + circle
+                ctx.strokeStyle = "rgba(233,240,255,.28)";
                 ctx.lineWidth = 2;
                 ctx.beginPath(); ctx.moveTo(0, mid); ctx.lineTo(w, mid); ctx.stroke();
                 ctx.beginPath(); ctx.arc(w / 2, mid, 62, 0, Math.PI * 2); ctx.stroke();
 
-                // pads (subtle)
-                ctx.fillStyle = "rgba(255,255,255,.03)";
-                ctx.fillRect(0, mid, w, h - mid);
+                // faceoff dot
+                ctx.fillStyle = "rgba(233,240,255,.20)";
+                ctx.beginPath(); ctx.arc(w / 2, mid, 4, 0, Math.PI * 2); ctx.fill();
 
-                drawPaddle(ai, "#e9f0ff", "#0b0f14");
-                drawPaddle(you, "#ffd66e", "#0b0f14");
+                // paddles
+                drawPaddle(ai, "#e9f0ff", "#0b0f14", "AI");
+                drawPaddle(you, "#ffd66e", "#0b0f14", "YOU");
 
-                // puck
-                ctx.save();
-                ctx.globalAlpha = 0.22;
-                ctx.fillStyle = "#000";
-                ctx.beginPath(); ctx.arc(puck.x, puck.y + 3, puck.r, 0, Math.PI * 2); ctx.fill();
+                // sparks
+                for (const s of sparks) {
+                    const a = clamp(s.life / 0.35, 0, 1);
+                    ctx.globalAlpha = a;
+                    ctx.fillStyle = "rgba(255,214,110,.9)";
+                    ctx.fillRect(s.x, s.y, 2, 2);
+                }
                 ctx.globalAlpha = 1;
-                ctx.fillStyle = "#0b0f14";
-                ctx.beginPath(); ctx.arc(puck.x, puck.y, puck.r, 0, Math.PI * 2); ctx.fill();
-                ctx.globalAlpha = 0.22;
-                ctx.fillStyle = "#e9f0ff";
-                ctx.beginPath(); ctx.arc(puck.x - 3, puck.y - 3, puck.r * 0.55, 0, Math.PI * 2); ctx.fill();
-                ctx.restore();
+
+                // puck with glow
+                drawPuck();
 
                 // message
                 if (state.running && state.message) {
@@ -1001,7 +1022,7 @@
                     ctx.fillStyle = "rgba(0,0,0,.55)";
                     ctx.fillRect(0, mid - 36, w, 72);
                     ctx.fillStyle = "#e9f0ff";
-                    ctx.font = "950 18px system-ui,-apple-system,Segoe UI,Roboto,sans-serif";
+                    ctx.font = "980 18px system-ui,-apple-system,Segoe UI,Roboto,sans-serif";
                     ctx.textAlign = "center";
                     ctx.textBaseline = "middle";
                     ctx.fillText(state.message, w / 2, mid);
@@ -1009,7 +1030,25 @@
                 }
             }
 
-            function drawPaddle(p, main, inner) {
+            function drawRailGlow(w, h) {
+                // left blue glow
+                const gl = ctx.createLinearGradient(0, 0, 0, h);
+                gl.addColorStop(0, "rgba(42,165,255,.22)");
+                gl.addColorStop(0.5, "rgba(42,165,255,.08)");
+                gl.addColorStop(1, "rgba(42,165,255,.22)");
+                ctx.fillStyle = gl;
+                ctx.fillRect(0, 0, 14, h);
+
+                // right red glow
+                const gr = ctx.createLinearGradient(0, 0, 0, h);
+                gr.addColorStop(0, "rgba(255,75,110,.22)");
+                gr.addColorStop(0.5, "rgba(255,75,110,.08)");
+                gr.addColorStop(1, "rgba(255,75,110,.22)");
+                ctx.fillStyle = gr;
+                ctx.fillRect(w - 14, 0, 14, h);
+            }
+
+            function drawPaddle(p, main, inner, label) {
                 // shadow
                 ctx.save();
                 ctx.globalAlpha = 0.25;
@@ -1017,21 +1056,62 @@
                 ctx.beginPath(); ctx.arc(p.x, p.y + 3, p.r, 0, Math.PI * 2); ctx.fill();
                 ctx.restore();
 
-                // body
+                // rim
                 ctx.fillStyle = main;
                 ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
 
-                // inner ring
+                // inner
                 ctx.fillStyle = inner;
-                ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.45, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.46, 0, Math.PI * 2); ctx.fill();
 
                 // highlight
                 ctx.globalAlpha = 0.18;
                 ctx.fillStyle = "#fff";
                 ctx.beginPath(); ctx.arc(p.x - p.r * 0.25, p.y - p.r * 0.25, p.r * 0.35, 0, Math.PI * 2); ctx.fill();
                 ctx.globalAlpha = 1;
+
+                // tiny label
+                ctx.save();
+                ctx.fillStyle = "rgba(0,0,0,.50)";
+                ctx.font = "900 10px system-ui,-apple-system,Segoe UI,Roboto,sans-serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(label, p.x, p.y);
+                ctx.restore();
             }
 
+            function drawPuck() {
+                // glow
+                if (puck.glow > 0.02) {
+                    ctx.save();
+                    ctx.globalAlpha = 0.35 * puck.glow;
+                    const rg = ctx.createRadialGradient(puck.x, puck.y, 2, puck.x, puck.y, 34);
+                    rg.addColorStop(0, "rgba(255,214,110,1)");
+                    rg.addColorStop(1, "rgba(255,214,110,0)");
+                    ctx.fillStyle = rg;
+                    ctx.beginPath(); ctx.arc(puck.x, puck.y, 34, 0, Math.PI * 2); ctx.fill();
+                    ctx.restore();
+                }
+
+                // shadow
+                ctx.save();
+                ctx.globalAlpha = 0.22;
+                ctx.fillStyle = "#000";
+                ctx.beginPath(); ctx.arc(puck.x, puck.y + 3, puck.r, 0, Math.PI * 2); ctx.fill();
+                ctx.globalAlpha = 1;
+
+                // body
+                ctx.fillStyle = "#0b0f14";
+                ctx.beginPath(); ctx.arc(puck.x, puck.y, puck.r, 0, Math.PI * 2); ctx.fill();
+
+                // texture highlight
+                ctx.globalAlpha = 0.22;
+                ctx.fillStyle = "#e9f0ff";
+                ctx.beginPath(); ctx.arc(puck.x - 3, puck.y - 3, puck.r * 0.55, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+
+            // -------------------- Main loop --------------------
             function loop(now) {
                 const frameDt = Math.min(GAME.maxFrame, (now - state.last) / 1000);
                 state.last = now;
@@ -1046,20 +1126,20 @@
                 requestAnimationFrame(loop);
             }
 
-            // -------------------- Init --------------------
-            function init() {
-                ui.targetLabel.textContent = String(GAME.targetScore);
-                ui.modeLabel.textContent = ui.diffSel.value.toUpperCase();
-                ui.sYou.textContent = "0";
-                ui.sAI.textContent = "0";
-                resetPositions();
-                requestAnimationFrame(loop);
-            }
+            // -------------------- Start / Init --------------------
+            ui.targetLabel.textContent = String(GAME.targetScore);
+            ui.sYou.textContent = "0";
+            ui.sAI.textContent = "0";
 
-            init();
+            // menu defaults
+            state.running = false;
+            state.paused = true;
+            state.gameOver = false;
+            state.message = "Tap Start";
 
-            // -------------------- Installable UX --------------------
-            // If you want an even more “app-like” feel, the PWA install does that.
+            resetPositions();
+            requestAnimationFrame(loop);
+
         })();
     </script>
 </body>
