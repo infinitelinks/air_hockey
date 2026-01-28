@@ -12,12 +12,10 @@
         :root {
             --bg: #070b12;
             --panel: rgba(18, 26, 36, .78);
-            --panel2: rgba(18, 26, 36, .60);
             --line: rgba(255, 255, 255, .12);
             --text: #e9f0ff;
             --muted: #a9b6cc;
             --gold: #ffd66e;
-            --ice: #cfe6ff;
             --blue: #2aa5ff;
             --red: #ff4b6e;
             --shadow: 0 18px 60px rgba(0, 0, 0, .45);
@@ -36,7 +34,6 @@
             -webkit-text-size-adjust: 100%;
         }
 
-        /* Use dynamic viewport on Android */
         .vh {
             height: 100vh;
         }
@@ -60,7 +57,7 @@
             touch-action: none;
         }
 
-        /* Top bar with neon scoreboard */
+        /* Topbar with neon scoreboard */
         .topbar {
             position: fixed;
             top: env(safe-area-inset-top, 0px);
@@ -93,7 +90,6 @@
             cursor: pointer;
             backdrop-filter: blur(10px);
             box-shadow: 0 10px 22px rgba(0, 0, 0, .18);
-            line-height: 0;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -106,6 +102,7 @@
 
         .btn.small {
             padding: 9px 10px;
+            font-size: 13px;
         }
 
         .btn.text {
@@ -181,68 +178,6 @@
 
         .sep {
             opacity: .55;
-        }
-
-        /* Thumb pad HUD (bottom) */
-        .thumbpad {
-            position: fixed;
-            left: env(safe-area-inset-left, 0px);
-            bottom: env(safe-area-inset-bottom, 0px);
-            padding: 12px;
-            z-index: 9;
-            pointer-events: none;
-            /* only joystick itself uses pointer events */
-        }
-
-        .joy {
-            pointer-events: auto;
-            width: 132px;
-            height: 132px;
-            border-radius: 999px;
-            border: 1px solid rgba(255, 255, 255, .12);
-            background:
-                radial-gradient(circle at 50% 50%, rgba(255, 255, 255, .08), rgba(0, 0, 0, .25));
-            backdrop-filter: blur(10px);
-            box-shadow: 0 18px 50px rgba(0, 0, 0, .35);
-            position: relative;
-            overflow: hidden;
-            touch-action: none;
-        }
-
-        .joy::after {
-            content: "";
-            position: absolute;
-            inset: 18px;
-            border-radius: 999px;
-            border: 1px dashed rgba(255, 255, 255, .16);
-            opacity: .8;
-        }
-
-        .knob {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            width: 56px;
-            height: 56px;
-            margin-left: -28px;
-            margin-top: -28px;
-            border-radius: 999px;
-            background:
-                radial-gradient(circle at 35% 30%, rgba(255, 255, 255, .18), rgba(255, 214, 110, .14) 35%, rgba(0, 0, 0, .22));
-            border: 1px solid rgba(255, 255, 255, .14);
-            box-shadow: 0 12px 24px rgba(0, 0, 0, .25);
-            transform: translate(0, 0);
-            transition: transform .08s linear;
-        }
-
-        .joyLabel {
-            margin-top: 8px;
-            font-weight: 900;
-            font-size: 12px;
-            color: rgba(233, 240, 255, .78);
-            text-shadow: 0 0 10px rgba(42, 165, 255, .18);
-            user-select: none;
-            pointer-events: none;
         }
 
         /* Overlays */
@@ -337,17 +272,6 @@
         }
 
         @media (max-width: 420px) {
-            .joy {
-                width: 120px;
-                height: 120px;
-            }
-
-            .knob {
-                width: 52px;
-                height: 52px;
-                margin-left: -26px;
-                margin-top: -26px;
-            }
 
             select,
             label.chk {
@@ -379,7 +303,6 @@
     <div class="topbar" id="topbar">
         <div class="leftBtns">
             <button class="btn small" id="gearBtn" aria-label="Settings">
-                <!-- gear icon -->
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="2" />
                     <path
@@ -388,7 +311,7 @@
                 </svg>
             </button>
 
-            <button class="btn small text ghost" id="pauseBtn">Pause</button>
+            <button class="btn small text" id="pauseBtn">Pause</button>
         </div>
 
         <div class="scoreNeon" id="scoreNeon">
@@ -403,33 +326,33 @@
         </div>
 
         <div class="rightBtns">
-            <button class="btn small text" id="resetBtn">Reset</button>
+            <!-- This becomes MENU during gameplay -->
+            <button class="btn small text" id="menuTopBtn">Menu</button>
         </div>
     </div>
 
-    <!-- Thumb joystick -->
-    <div class="thumbpad">
-        <div class="joy" id="joy">
-            <div class="knob" id="knob"></div>
-        </div>
-        <div class="joyLabel">Thumb Control</div>
-    </div>
-
-    <!-- Start overlay (minimal) -->
-    <div class="overlay" id="startOverlay">
+    <!-- Start/Main Menu overlay -->
+    <div class="overlay" id="menuOverlay">
         <div class="card">
             <h1 class="title">Air Hockey Pro</h1>
             <p class="sub">
-                Use the <b>thumb pad</b> to move your paddle without covering it.
-                Tap the board to serve. Install for best Android experience.
+                Drag anywhere on the <b>bottom half</b> to move your paddle. Tap the board to serve.
+                Install as a PWA for best Android full-screen feel.
             </p>
+
             <div class="row">
-                <button class="btn primary text" id="startBtn" style="flex:1 1 220px;">Start Match</button>
+                <button class="btn primary text" id="startBtn" style="flex:1 1 220px;">Start / Resume</button>
                 <button class="btn text" id="installBtn" style="flex:1 1 160px;">Install</button>
             </div>
+
+            <div class="row" style="margin-top:10px;">
+                <button class="btn text" id="resetMatchBtn" style="flex:1 1 220px;">Reset Match</button>
+                <button class="btn text" id="closeMenuBtn" style="flex:1 1 160px;">Close</button>
+            </div>
+
             <div class="stat" style="margin-top:10px;">
                 <small>Tip</small>
-                If your phone hides UI bars, install the PWA and run it from the home screen.
+                For best Android fit: install the app and launch from home screen.
             </div>
         </div>
     </div>
@@ -441,7 +364,7 @@
             <p class="sub" style="margin-bottom:12px;">Resume when you’re ready.</p>
             <div class="row">
                 <button class="btn primary text" id="resumeBtn" style="flex:1 1 200px;">Resume</button>
-                <button class="btn text" id="menuBtn" style="flex:1 1 200px;">Main Menu</button>
+                <button class="btn text" id="openMenuBtn" style="flex:1 1 200px;">Menu</button>
             </div>
         </div>
     </div>
@@ -501,7 +424,7 @@
 
     <script>
         (() => {
-            // ---------------- PWA install prompt ----------------
+            // -------- PWA install prompt --------
             let deferredPrompt = null;
             window.addEventListener("beforeinstallprompt", (e) => {
                 e.preventDefault();
@@ -515,7 +438,7 @@
                 });
             }
 
-            // ---------------- DOM ----------------
+            // -------- DOM --------
             const canvas = document.getElementById("c");
             const ctx = canvas.getContext("2d", { alpha: false });
 
@@ -525,16 +448,17 @@
                 modeTag: document.getElementById("modeTag"),
                 personaTag: document.getElementById("personaTag"),
 
-                startOverlay: document.getElementById("startOverlay"),
+                menuOverlay: document.getElementById("menuOverlay"),
                 startBtn: document.getElementById("startBtn"),
-                installBtn: document.getElementById("installBtn"),
+                closeMenuBtn: document.getElementById("closeMenuBtn"),
+                resetMatchBtn: document.getElementById("resetMatchBtn"),
 
                 pauseBtn: document.getElementById("pauseBtn"),
-                resetBtn: document.getElementById("resetBtn"),
+                menuTopBtn: document.getElementById("menuTopBtn"),
 
                 pauseOverlay: document.getElementById("pauseOverlay"),
                 resumeBtn: document.getElementById("resumeBtn"),
-                menuBtn: document.getElementById("menuBtn"),
+                openMenuBtn: document.getElementById("openMenuBtn"),
 
                 settingsOverlay: document.getElementById("settingsOverlay"),
                 gearBtn: document.getElementById("gearBtn"),
@@ -548,11 +472,10 @@
                 profileLine: document.getElementById("profileLine"),
                 targetLabel: document.getElementById("targetLabel"),
 
-                joy: document.getElementById("joy"),
-                knob: document.getElementById("knob"),
+                installBtn: document.getElementById("installBtn"),
             };
 
-            // ---------------- Resize (Android fit) ----------------
+            // -------- Resize (Android fit) --------
             function resize() {
                 const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
                 canvas.width = Math.floor(innerWidth * dpr);
@@ -564,14 +487,14 @@
             const dims = () => ({ w: innerWidth, h: innerHeight });
             const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-            // ---------------- Haptics ----------------
+            // -------- Haptics --------
             function vibrate(pattern) {
                 if (!ui.hapticsToggle.checked) return;
                 if (!("vibrate" in navigator)) return;
                 try { navigator.vibrate(pattern); } catch { }
             }
 
-            // ---------------- Audio (generated, no assets) ----------------
+            // -------- Audio (generated) --------
             let audioCtx = null;
             function ensureAudio() {
                 if (!ui.soundToggle.checked) return;
@@ -610,10 +533,17 @@
             };
             window.addEventListener("pointerdown", ensureAudio, { passive: true });
 
-            // ---------------- Game constants ----------------
+            // -------- Install --------
+            ui.installBtn.addEventListener("click", async () => {
+                if (!deferredPrompt) return;
+                deferredPrompt.prompt();
+                try { await deferredPrompt.userChoice; } catch { }
+                deferredPrompt = null;
+            });
+
+            // -------- Game constants --------
             const GAME = { targetScore: 7, fixedDt: 1 / 120, maxFrame: 1 / 30 };
             const table = { wall: 10, pad: 22, goalWidthFrac: 0.34 };
-
             ui.targetLabel.textContent = String(GAME.targetScore);
 
             // Entities
@@ -634,7 +564,7 @@
                 }
             }
 
-            // ---------------- Learning profile ----------------
+            // -------- Learning profile --------
             const PROFILE_KEY = "ah_profile_v3";
             function makeFreshProfile() { return { samples: 0, emaShotDir: 0, lastUpdate: Date.now() }; }
             function loadProfile() { try { const r = localStorage.getItem(PROFILE_KEY); return r ? JSON.parse(r) : null; } catch { return null; } }
@@ -651,7 +581,7 @@
             }
             updateProfileUI();
 
-            // ---------------- State ----------------
+            // -------- State --------
             const state = {
                 running: false,
                 paused: true,
@@ -665,15 +595,9 @@
                 last: performance.now(),
                 acc: 0,
 
-                // touch input (board tap to serve)
                 pointerDown: false,
+                youTarget: { x: 0, y: 0 },
                 lastPuckV: { vx: 0, vy: 0 },
-
-                // thumbpad
-                joyActive: false,
-                joyId: null,
-                joyCenter: { x: 0, y: 0 },
-                joyVec: { x: 0, y: 0 },     // -1..1
             };
 
             function applyModeTags() {
@@ -682,7 +606,7 @@
             }
             applyModeTags();
 
-            // ---------------- Difficulty + personality ----------------
+            // -------- Difficulty + personality --------
             function baseParamsByDifficulty(d) {
                 switch (d) {
                     case "easy": return { speed: 1020, pressure: 0.30, predict: 0.40, shotPower: 0.65, adapt: 0.08, learn: 0.00 };
@@ -694,7 +618,6 @@
                     default: return { speed: 1250, pressure: 0.48, predict: 0.58, shotPower: 0.78, adapt: 0.12, learn: 0.00 };
                 }
             }
-
             function personaModifiers(persona) {
                 switch (persona) {
                     case "defensive": return { pressureMul: 0.85, bankBias: 0.40, goalieSnap: 1.15, trickRate: 0.10 };
@@ -703,7 +626,6 @@
                     default: return { pressureMul: 1.00, bankBias: 0.55, goalieSnap: 1.00, trickRate: 0.12 };
                 }
             }
-
             function effectiveAIParams() {
                 const base = baseParamsByDifficulty(state.diff);
                 const pm = personaModifiers(state.persona);
@@ -726,97 +648,72 @@
                 };
             }
 
-            // ---------------- Thumbpad control ----------------
-            // The joystick controls paddle by velocity-style movement so the finger never blocks the puck.
-            function setKnob(x, y) {
-                ui.knob.style.transform = `translate(${x}px, ${y}px)`;
-            }
-            function resetKnob() {
-                ui.knob.style.transform = `translate(0px, 0px)`;
+            // -------- Player controls: drag on bottom half --------
+            function setTargetFromEvent(e) {
+                state.youTarget.x = e.clientX;
+                state.youTarget.y = e.clientY;
             }
 
-            ui.joy.addEventListener("pointerdown", (e) => {
-                e.preventDefault();
-                ui.joy.setPointerCapture(e.pointerId);
-                state.joyActive = true;
-                state.joyId = e.pointerId;
-
-                const r = ui.joy.getBoundingClientRect();
-                state.joyCenter.x = r.left + r.width / 2;
-                state.joyCenter.y = r.top + r.height / 2;
-
-                handleJoyMove(e.clientX, e.clientY);
-            }, { passive: false });
-
-            ui.joy.addEventListener("pointermove", (e) => {
-                if (!state.joyActive || e.pointerId !== state.joyId) return;
-                handleJoyMove(e.clientX, e.clientY);
-            }, { passive: true });
-
-            ui.joy.addEventListener("pointerup", (e) => {
-                if (e.pointerId !== state.joyId) return;
-                state.joyActive = false;
-                state.joyId = null;
-                state.joyVec.x = 0; state.joyVec.y = 0;
-                resetKnob();
-            }, { passive: true });
-
-            ui.joy.addEventListener("pointercancel", (e) => {
-                if (e.pointerId !== state.joyId) return;
-                state.joyActive = false;
-                state.joyId = null;
-                state.joyVec.x = 0; state.joyVec.y = 0;
-                resetKnob();
-            }, { passive: true });
-
-            function handleJoyMove(x, y) {
-                const dx = x - state.joyCenter.x;
-                const dy = y - state.joyCenter.y;
-                const maxR = 46; // knob travel radius
-                const len = Math.hypot(dx, dy) || 1;
-                const cl = Math.min(maxR, len);
-                const nx = (dx / len) * cl;
-                const ny = (dy / len) * cl;
-
-                // normalize -1..1
-                state.joyVec.x = nx / maxR;
-                state.joyVec.y = ny / maxR;
-
-                setKnob(nx, ny);
-            }
-
-            // Tap board to serve
             canvas.addEventListener("pointerdown", (e) => {
-                // if settings open, ignore
-                if (!state.running) return;
-                if (state.paused && !state.gameOver) serve();
+                state.pointerDown = true;
+                setTargetFromEvent(e);
+                // tap to serve
+                if (state.running && state.paused && !state.gameOver) serve();
             }, { passive: true });
 
-            // ---------------- UI actions ----------------
-            ui.installBtn.addEventListener("click", async () => {
-                if (!deferredPrompt) return;
-                deferredPrompt.prompt();
-                try { await deferredPrompt.userChoice; } catch { }
-                deferredPrompt = null;
+            canvas.addEventListener("pointermove", (e) => {
+                if (!state.pointerDown) return;
+                setTargetFromEvent(e);
+            }, { passive: true });
+
+            canvas.addEventListener("pointerup", () => state.pointerDown = false, { passive: true });
+            canvas.addEventListener("pointercancel", () => state.pointerDown = false, { passive: true });
+
+            // -------- UI actions --------
+            ui.gearBtn.addEventListener("click", () => {
+                ui.settingsOverlay.classList.remove("hide");
+                ui.diffSel.value = state.diff;
+                ui.personaSel.value = state.persona;
+                updateProfileUI();
+            });
+            ui.closeSettingsBtn.addEventListener("click", () => ui.settingsOverlay.classList.add("hide"));
+
+            ui.diffSel.addEventListener("change", () => { state.diff = ui.diffSel.value; applyModeTags(); });
+            ui.personaSel.addEventListener("change", () => { state.persona = ui.personaSel.value; applyModeTags(); });
+
+            ui.resetLearningBtn.addEventListener("click", () => {
+                try { localStorage.removeItem(PROFILE_KEY); } catch { }
+                profile = makeFreshProfile();
+                updateProfileUI();
             });
 
             ui.startBtn.addEventListener("click", () => {
                 state.running = true;
                 state.paused = true;
                 state.gameOver = false;
-                ui.startOverlay.classList.add("hide");
+                ui.menuOverlay.classList.add("hide");
                 resetPositions();
                 state.message = "Tap to serve";
             });
 
-            ui.resetBtn.addEventListener("click", () => {
+            ui.closeMenuBtn.addEventListener("click", () => {
+                ui.menuOverlay.classList.add("hide");
+                if (state.running && !state.gameOver) {
+                    // remain paused until serve
+                    state.paused = true;
+                    state.message = "Tap to serve";
+                }
+            });
+
+            ui.resetMatchBtn.addEventListener("click", () => {
                 state.scoreYou = 0; state.scoreAI = 0;
-                ui.sYou.textContent = "0";
-                ui.sAI.textContent = "0";
+                ui.sYou.textContent = "0"; ui.sAI.textContent = "0";
                 state.gameOver = false;
+                state.running = true;
                 state.paused = true;
                 resetPositions();
                 state.message = "Tap to serve";
+                ui.menuOverlay.classList.add("hide");
             });
 
             ui.pauseBtn.addEventListener("click", () => {
@@ -825,42 +722,17 @@
             });
 
             ui.resumeBtn.addEventListener("click", () => togglePause(false));
-            ui.menuBtn.addEventListener("click", () => {
-                ui.pauseOverlay.classList.add("hide");
-                ui.startOverlay.classList.remove("hide");
-                state.running = false;
+            ui.openMenuBtn.addEventListener("click", () => openMenu());
+
+            // Top-right MENU button (replaces reset during gameplay)
+            ui.menuTopBtn.addEventListener("click", () => openMenu());
+
+            function openMenu() {
                 state.paused = true;
-                state.gameOver = false;
-                resetPositions();
-            });
-
-            ui.gearBtn.addEventListener("click", () => {
-                ui.settingsOverlay.classList.remove("hide");
-                // sync dropdowns
-                ui.diffSel.value = state.diff;
-                ui.personaSel.value = state.persona;
-                updateProfileUI();
-            });
-
-            ui.closeSettingsBtn.addEventListener("click", () => {
-                ui.settingsOverlay.classList.add("hide");
-            });
-
-            ui.diffSel.addEventListener("change", () => {
-                state.diff = ui.diffSel.value;
-                applyModeTags();
-            });
-
-            ui.personaSel.addEventListener("change", () => {
-                state.persona = ui.personaSel.value;
-                applyModeTags();
-            });
-
-            ui.resetLearningBtn.addEventListener("click", () => {
-                try { localStorage.removeItem(PROFILE_KEY); } catch { }
-                profile = makeFreshProfile();
-                updateProfileUI();
-            });
+                state.message = "Paused";
+                ui.pauseOverlay.classList.add("hide");
+                ui.menuOverlay.classList.remove("hide");
+            }
 
             function togglePause(force) {
                 const next = (typeof force === "boolean") ? force : !state.paused;
@@ -874,12 +746,13 @@
                 }
             }
 
-            // ---------------- Core game helpers ----------------
+            // -------- Core helpers --------
             function resetPositions() {
                 const { w, h } = dims();
                 puck.x = w / 2; puck.y = h / 2; puck.vx = 0; puck.vy = 0; puck.glow = 0;
                 you.x = w / 2; you.y = h * 0.78; you.vx = you.vy = 0;
                 ai.x = w / 2; ai.y = h * 0.22; ai.vx = ai.vy = 0;
+                state.youTarget = { x: w / 2, y: h * 0.78 };
                 sparks.length = 0;
                 state.lastPuckV.vx = 0; state.lastPuckV.vy = 0;
             }
@@ -896,26 +769,6 @@
                 state.message = "";
             }
 
-            function collideDisc(pad) {
-                const dx = puck.x - pad.x;
-                const dy = puck.y - pad.y;
-                const dist = Math.hypot(dx, dy);
-                const minD = pad.r + puck.r;
-                if (dist <= 0.0001 || dist >= minD) return false;
-
-                const nx = dx / dist, ny = dy / dist;
-                const overlap = (minD - dist);
-                puck.x += nx * overlap;
-                puck.y += ny * overlap;
-
-                const rvx = puck.vx - pad.vx;
-                const rvy = puck.vy - pad.vy;
-                const vn = rvx * nx + rvy * ny;
-                if (vn > z > 0) return true; // (typo safeguard below)
-                // Fix: if vn > 0 just return true
-            }
-
-            // Safety fix for the line above (in case browser caches): redefine correctly
             function collideDiscSafe(pad) {
                 const dx = puck.x - pad.x;
                 const dy = puck.y - pad.y;
@@ -999,7 +852,7 @@
                 if (state.scoreYou >= GAME.targetScore || state.scoreAI >= GAME.targetScore) {
                     state.paused = true;
                     state.gameOver = true;
-                    state.message = (state.scoreYou > state.scoreAI) ? "You win! Press Reset" : "AI wins! Press Reset";
+                    state.message = (state.scoreYou > state.scoreAI) ? "You win! Open Menu" : "AI wins! Open Menu";
                     sfx.win();
                     vibrate([30, 40, 30, 40, 30]);
                     puck.vx = puck.vy = 0;
@@ -1017,6 +870,7 @@
 
                 let tx = clamp(target.x, table.pad, w - table.pad);
                 let ty = target.y;
+
                 if (half === "bottom") ty = clamp(ty, mid + table.pad, h - table.pad);
                 else ty = clamp(ty, table.pad, mid - table.pad);
 
@@ -1036,7 +890,7 @@
                 }
             }
 
-            // ---------------- AI prediction & shot logic ----------------
+            // -------- AI prediction & shots --------
             function predictPuckXAtY(targetY) {
                 const { w } = dims();
                 const left = table.wall + puck.r;
@@ -1083,11 +937,11 @@
 
                 if (puckComingUp || puckInAiHalf) {
                     const px = predictPuckXAtY(interceptY);
-                    return { x: clamp(px, table.pad, w - table.pad), y: clamp(interceptY, table.pad, midY - table.pad), speed: P.speed };
+                    return { x: clamp(px, table.pad, w - table.pad), y: clamp(interceptY, table.pad, midY - table.pad) };
                 }
 
                 const pressureY = clamp(h * (0.26 + 0.18 * P.pressure), table.pad, midY - table.pad);
-                return { x: clamp(puck.x, table.pad, w - table.pad), y: pressureY, speed: P.speed };
+                return { x: clamp(puck.x, table.pad, w - table.pad), y: pressureY };
             }
 
             function aiShotAssist() {
@@ -1136,7 +990,6 @@
                 const learnRate = base.learn;
                 if (learnRate <= 0) return;
 
-                // emaShotDir uses puck.vx sign after your hit
                 const dir = clamp(puck.vx / (Math.abs(puck.vx) + 250), -1, 1);
                 const a = learnRate;
 
@@ -1148,37 +1001,21 @@
                 updateProfileUI();
             }
 
-            // ---------------- Update loop ----------------
+            // -------- Update loop --------
             function step(dt) {
                 const { w, h } = dims();
                 const mid = h / 2;
 
-                // Player target driven by thumbpad vector
-                // Move speed scales with screen size so it feels consistent on Android
-                const padSpeed = Math.max(900, Math.min(1500, w * 1.3));
-                you.vx *= 0.65; you.vy *= 0.65;
-
-                // Apply thumb vector as a "desired velocity"
-                const vx = state.joyVec.x * padSpeed;
-                const vy = state.joyVec.y * padSpeed;
-
-                // Integrate paddle position from joystick (keeps finger off the paddle)
-                you.x += vx * dt;
-                you.y += vy * dt;
-
-                // Clamp bottom half
-                you.x = clamp(you.x, table.pad, w - table.pad);
-                you.y = clamp(you.y, mid + table.pad, h - table.pad);
-
-                // compute paddle velocity (for collisions)
-                you.vx = vx;
-                you.vy = vy;
+                // Player moves via drag target (bottom half)
+                const tx = clamp(state.youTarget.x || you.x, table.pad, w - table.pad);
+                const ty = clamp(state.youTarget.y || you.y, mid + table.pad, h - table.pad);
+                movePad(you, { x: tx, y: ty }, dt, 2600, "bottom");
 
                 // AI
                 const P = effectiveAIParams();
                 const base = computeAiTarget();
                 const shot = aiShotAssist();
-                const aTarget = shot || { x: base.x, y: base.y };
+                const aTarget = shot || base;
                 movePad(ai, aTarget, dt, P.speed, "top");
 
                 // particles
@@ -1195,10 +1032,10 @@
 
                 if (state.paused || state.gameOver || !state.running) return;
 
-                // puck integrate
                 state.lastPuckV.vx = puck.vx;
                 state.lastPuckV.vy = puck.vy;
 
+                // puck integrate
                 puck.x += puck.vx * dt;
                 puck.y += puck.vy * dt;
 
@@ -1231,16 +1068,14 @@
                 }
             }
 
-            // ---------------- Drawing (neon board) ----------------
+            // -------- Drawing (neon board) --------
             function draw() {
                 const { w, h } = dims();
                 const mid = h / 2;
 
-                // background
                 ctx.fillStyle = "#070b12";
                 ctx.fillRect(0, 0, w, h);
 
-                // table gradient
                 const g = ctx.createLinearGradient(0, 0, 0, h);
                 g.addColorStop(0, "#0c1a2a");
                 g.addColorStop(0.55, "#0b2036");
@@ -1248,7 +1083,6 @@
                 ctx.fillStyle = g;
                 ctx.fillRect(0, 0, w, h);
 
-                // rail glow
                 drawRailGlow(w, h);
 
                 // walls
@@ -1265,17 +1099,15 @@
                 ctx.fillRect(gx1, 0, goalW, table.wall);
                 ctx.fillRect(gx1, h - table.wall, goalW, table.wall);
 
-                // center line and circle
+                // center
                 ctx.strokeStyle = "rgba(233,240,255,.25)";
                 ctx.lineWidth = 2;
                 ctx.beginPath(); ctx.moveTo(0, mid); ctx.lineTo(w, mid); ctx.stroke();
                 ctx.beginPath(); ctx.arc(w / 2, mid, 62, 0, Math.PI * 2); ctx.stroke();
 
-                // paddles + puck + sparks
                 drawPaddle(ai, "#e9f0ff", "#0b0f14", "AI");
                 drawPaddle(you, "#ffd66e", "#0b0f14", "YOU");
 
-                // sparks
                 for (const s of sparks) {
                     const a = clamp(s.life / 0.35, 0, 1);
                     ctx.globalAlpha = a;
@@ -1286,7 +1118,6 @@
 
                 drawPuck();
 
-                // message
                 if (state.running && state.message) {
                     ctx.save();
                     ctx.fillStyle = "rgba(0,0,0,.55)";
@@ -1370,7 +1201,7 @@
                 ctx.restore();
             }
 
-            // ---------------- Main loop ----------------
+            // -------- Main loop --------
             function loop(now) {
                 const frameDt = Math.min(GAME.maxFrame, (now - state.last) / 1000);
                 state.last = now;
@@ -1385,8 +1216,9 @@
                 requestAnimationFrame(loop);
             }
 
-            // ---------------- Start ----------------
+            // -------- Init --------
             resetPositions();
+            ui.menuOverlay.classList.remove("hide"); // open menu first
             requestAnimationFrame(loop);
 
         })();
